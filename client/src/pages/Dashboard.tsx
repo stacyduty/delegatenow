@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import DashboardStats from "@/components/DashboardStats";
 import VoiceButton from "@/components/VoiceButton";
 import TaskCard from "@/components/TaskCard";
 import VoiceOverlay from "@/components/VoiceOverlay";
 import PriorityMatrix from "@/components/PriorityMatrix";
+import { SubscriptionOnboarding } from "@/components/SubscriptionOnboarding";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Task, TeamMember } from "@shared/schema";
+import type { Task, TeamMember, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 
 interface DashboardStats {
@@ -19,6 +20,28 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const [voiceOverlayOpen, setVoiceOverlayOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const { data: user } = useQuery<User>({
+    queryKey: ['/api/auth/user'],
+  });
+
+  // Show onboarding for new users without active subscription
+  useEffect(() => {
+    if (user && !user.subscriptionStatus) {
+      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+      if (!hasSeenOnboarding) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [user]);
+
+  const handleOnboardingClose = (open: boolean) => {
+    setShowOnboarding(open);
+    if (!open) {
+      localStorage.setItem('hasSeenOnboarding', 'true');
+    }
+  };
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
@@ -153,6 +176,11 @@ export default function Dashboard() {
       <VoiceOverlay
         isOpen={voiceOverlayOpen}
         onClose={() => setVoiceOverlayOpen(false)}
+      />
+
+      <SubscriptionOnboarding 
+        open={showOnboarding}
+        onOpenChange={handleOnboardingClose}
       />
     </div>
   );

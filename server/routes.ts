@@ -488,9 +488,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ STRIPE SUBSCRIPTION ROUTES ============
 
   // Get or create subscription for Executive Plan ($1/month)
-  app.post('/api/subscription/create', async (req: any, res) => {
+  app.post('/api/subscription/create', isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
 
       // If user already has an active subscription, return it
       if (user.subscriptionId) {
@@ -508,9 +513,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create Stripe customer if not exists
       let stripeCustomerId = user.stripeCustomerId;
       if (!stripeCustomerId) {
+        const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
         const customer = await stripe.customers.create({
-          email: user.email,
-          name: user.username,
+          email: user.email || undefined,
+          name: fullName,
           metadata: {
             userId: user.id,
           },
@@ -551,9 +557,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cancel subscription
-  app.post('/api/subscription/cancel', async (req: any, res) => {
+  app.post('/api/subscription/cancel', isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
 
       if (!user.subscriptionId) {
         return res.status(400).json({ error: "No active subscription found" });
@@ -581,9 +592,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get subscription status
-  app.get('/api/subscription/status', async (req: any, res) => {
+  app.get('/api/subscription/status', isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
 
       if (!user.subscriptionId) {
         return res.json({ 
