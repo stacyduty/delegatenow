@@ -8,10 +8,18 @@ import {
   insertTeamMemberSchema,
   insertNotificationSchema,
   insertVoiceHistorySchema,
+  insertCalendarEventSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import Stripe from "stripe";
+import {
+  listCalendarEvents,
+  createCalendarEvent,
+  deleteCalendarEvent,
+  updateCalendarEvent,
+  getFreeBusyInfo,
+} from "./integrations/googleCalendar";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
@@ -663,6 +671,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching subscription status:", error);
       res.status(500).json({ error: "Failed to fetch subscription status" });
+    }
+  });
+
+  // ============ CALENDAR ROUTES ============
+
+  // Get calendar events
+  app.get('/api/calendar/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const timeMin = req.query.timeMin ? new Date(req.query.timeMin as string) : new Date();
+      const timeMax = req.query.timeMax ? new Date(req.query.timeMax as string) : undefined;
+      const maxResults = req.query.maxResults ? parseInt(req.query.maxResults as string) : 50;
+
+      const events = await listCalendarEvents(timeMin, timeMax, maxResults);
+      res.json(events);
+    } catch (error: any) {
+      console.error("Error fetching calendar events:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch calendar events" });
+    }
+  });
+
+  // Create calendar event from task
+  app.post('/api/calendar/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const requestSchema = z.object({
+        taskId: z.string().optional(),
+        summary: z.string().min(1),
+        description: z.string().optional(),
+        startTime: z.string().transform(str => new Date(str)),
+        endTime: z.string().transform(str => new Date(str)),
+        attendees: z.array(z.string().email()).optional(),
+      });
+
+      const data = requestSchema.parse(req.body);
+      
+      const event = await createCalendarEvent({
+        summary: data.summary,
+        description: data.description,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        attendees: data.attendees,
+      });
+
+      const userId = req.user.claims.sub;
+      await storage.createCalendarEvent({
+        userId,
+        taskId: data.taskId || null,
+        googleEventId: event.id!,
+        title: data.summary,
+        description: data.description || null,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        attendees: data.attendees || [],
+        location: null,
+        status: 'confirmed',
+      });
+
+      res.json(event);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const friendlyError = fromZodError(error);
+        return res.status(400).json({ error: friendlyError.message });
+      }
+      console.error("Error creating calendar event:", error);
+      res.status(500).json({ error: error.message || "Failed to create calendar event" });
+    }
+  });
+
+  // Sync task deadline to calendar
+  app.post('/api/tasks/:id/sync-to-calendar', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.id);
+
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      if (!task.dueDate) {
+        return res.status(400).json({ error: "Task has no due date to sync" });
+      }
+
+      const startTime = new Date(task.dueDate);
+      startTime.setHours(startTime.getHours() - 1);
+      const endTime = new Date(task.dueDate);
+
+      const event = await createCalendarEvent({
+        summary: `Task Due: ${task.title}`,
+        description: task.description || undefined,
+        startTime,
+        endTime,
+      });
+
+      await storage.createCalendarEvent({
+        userId,
+        taskId: task.id,
+        googleEventId: event.id!,
+        title: `Task Due: ${task.title}`,
+        description: task.description,
+        startTime,
+        endTime,
+        attendees: [],
+        location: null,
+        status: 'confirmed',
+      });
+
+      res.json({ success: true, event });
+    } catch (error: any) {
+      console.error("Error syncing task to calendar:", error);
+      res.status(500).json({ error: error.message || "Failed to sync task to calendar" });
+    }
+  });
+
+  // Get team availability
+  app.post('/api/calendar/availability', isAuthenticated, async (req: any, res) => {
+    try {
+      const requestSchema = z.object({
+        emails: z.array(z.string().email()),
+        timeMin: z.string().transform(str => new Date(str)),
+        timeMax: z.string().transform(str => new Date(str)),
+      });
+
+      const data = requestSchema.parse(req.body);
+      const availability = await getFreeBusyInfo(data.emails, data.timeMin, data.timeMax);
+      
+      res.json(availability);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const friendlyError = fromZodError(error);
+        return res.status(400).json({ error: friendlyError.message });
+      }
+      console.error("Error checking availability:", error);
+      res.status(500).json({ error: error.message || "Failed to check availability" });
     }
   });
 

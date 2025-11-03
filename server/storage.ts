@@ -5,7 +5,8 @@ import {
   type Task, type InsertTask,
   type Notification, type InsertNotification,
   type VoiceHistory, type InsertVoiceHistory,
-  users, teamMembers, tasks, notifications, voiceHistory
+  type CalendarEvent, type InsertCalendarEvent,
+  users, teamMembers, tasks, notifications, voiceHistory, calendarEvents
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -40,6 +41,12 @@ export interface IStorage {
   // Voice history operations
   getVoiceHistory(userId: string): Promise<VoiceHistory[]>;
   createVoiceHistory(history: InsertVoiceHistory): Promise<VoiceHistory>;
+  
+  // Calendar event operations
+  getCalendarEvents(userId: string): Promise<CalendarEvent[]>;
+  getCalendarEvent(id: string): Promise<CalendarEvent | undefined>;
+  createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
+  deleteCalendarEvent(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -153,6 +160,25 @@ export class DbStorage implements IStorage {
   async createVoiceHistory(history: InsertVoiceHistory): Promise<VoiceHistory> {
     const result = await db.insert(voiceHistory).values(history).returning();
     return result[0];
+  }
+
+  // Calendar event operations
+  async getCalendarEvents(userId: string): Promise<CalendarEvent[]> {
+    return await db.select().from(calendarEvents).where(eq(calendarEvents.userId, userId)).orderBy(desc(calendarEvents.startTime));
+  }
+
+  async getCalendarEvent(id: string): Promise<CalendarEvent | undefined> {
+    const result = await db.select().from(calendarEvents).where(eq(calendarEvents.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent> {
+    const result = await db.insert(calendarEvents).values(event).returning();
+    return result[0];
+  }
+
+  async deleteCalendarEvent(id: string): Promise<void> {
+    await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
   }
 }
 

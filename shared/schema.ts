@@ -146,3 +146,29 @@ export const insertVoiceHistorySchema = createInsertSchema(voiceHistory).omit({
 
 export type InsertVoiceHistory = z.infer<typeof insertVoiceHistorySchema>;
 export type VoiceHistory = typeof voiceHistory.$inferSelect;
+
+// Calendar Events - synced from Google Calendar
+export const calendarEvents = pgTable("calendar_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "set null" }),
+  googleEventId: text("google_event_id").unique(),
+  title: text("title").notNull(),
+  description: text("description"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  attendees: text("attendees").array(),
+  location: text("location"),
+  status: text("status").default("confirmed"), // confirmed, tentative, cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
