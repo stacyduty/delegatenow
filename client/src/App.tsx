@@ -13,6 +13,7 @@ import Tasks from "@/pages/Tasks";
 import Team from "@/pages/Team";
 import Analytics from "@/pages/Analytics";
 import DelegationHistory from "@/pages/DelegationHistory";
+import Calendar from "@/pages/Calendar";
 import Settings from "@/pages/Settings";
 import VoiceHistory from "@/pages/VoiceHistory";
 import Landing from "@/pages/Landing";
@@ -64,6 +65,9 @@ function Router() {
       </Route>
       <Route path="/delegation-history">
         <ProtectedRoute component={DelegationHistory} />
+      </Route>
+      <Route path="/calendar">
+        <ProtectedRoute component={Calendar} />
       </Route>
       <Route path="/voice-history">
         <ProtectedRoute component={VoiceHistory} />
