@@ -2,9 +2,9 @@
 
 ## Overview
 
-Deleg8te.ai is a voice-powered task delegation platform designed for executives to efficiently manage teams and tasks. The application enables users to speak their tasks, leveraging AI to analyze, prioritize, and delegate work automatically. Built with a modern tech stack, it features real-time task tracking, team management, and analytics with an emphasis on executive productivity and minimal friction.
+Deleg8te.ai is a voice-powered task delegation platform designed for executives to efficiently manage teams and tasks. The application enables users to speak their tasks, leveraging AI to analyze, prioritize, and delegate work automatically. Built with a modern tech stack, it features real-time task tracking, team management, analytics, and **Google Calendar integration** with an emphasis on executive productivity and minimal friction.
 
-**Core Value Proposition:** Transform voice input into structured, delegated tasks with AI-powered analysis including impact assessment, urgency classification, and SMART objectives generation. Now includes enterprise-grade compliance features: formal task acceptance timestamps, expiry tracking, spending limits, and complete audit trails.
+**Core Value Proposition:** Transform voice input into structured, delegated tasks with AI-powered analysis including impact assessment, urgency classification, and SMART objectives generation. Now includes enterprise-grade compliance features: formal task acceptance timestamps, expiry tracking, spending limits, and complete audit trails. **NEW: Google Calendar integration** for two-way sync, deadline tracking, and team availability.
 
 **Competitive Advantage:** Combines the AI-powered speed and productivity of modern tools ($1/month/user, instant deployment, voice-first interface, 14-day free trial with no credit card needed) with the compliance and governance features of enterprise delegation platforms (acceptance records, expiry management, audit trails) - without the $10k-15k setup fees or 7-180 day deployment times.
 
@@ -73,6 +73,7 @@ Preferred communication style: Simple, everyday language.
   - `spendingLimit`: Optional financial authority cap (decimal precision: 15,2)
 - `notifications`: Real-time activity notifications
 - `voiceHistory`: Audit trail of voice input transcripts and AI analysis
+- `calendarEvents`: **NEW** Google Calendar event tracking with task linkage, sync status, and attendee management
 
 **Data Relationships:**
 - User → TeamMembers (one-to-many, cascade delete)
@@ -80,6 +81,8 @@ Preferred communication style: Simple, everyday language.
 - TeamMember → Tasks (one-to-many via teamMemberId foreign key)
 - User → Notifications (one-to-many)
 - User → VoiceHistory (one-to-many)
+- User → CalendarEvents (one-to-many, cascade delete) **NEW**
+- Task → CalendarEvent (optional one-to-one via taskId foreign key) **NEW**
 
 ### Authentication & Authorization
 
@@ -106,6 +109,13 @@ Preferred communication style: Simple, everyday language.
 - Executive Plan: $1/month with unlimited team members
 - Customer ID and subscription status tracked in user records
 - Webhook handling for subscription events (indicated by raw body parsing)
+
+**Google Calendar Integration:** **NEW**
+- Google Calendar API via Replit connector for OAuth management
+- Two-way sync: View calendar events and create events from tasks
+- Task deadline auto-sync with 1-hour pre-deadline calendar blocks
+- Team availability checking via free/busy API
+- Event tracking in database with task linkage
 
 **Third-party UI Libraries:**
 - Radix UI component primitives (20+ components)
