@@ -13,6 +13,8 @@ import {
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import Stripe from "stripe";
+import bcrypt from "bcrypt";
+import crypto from "crypto";
 import {
   listCalendarEvents,
   createCalendarEvent,
@@ -348,6 +350,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============ TEAM MEMBER ROUTES ============
+
+  // Team Member Authentication Routes
+
+  // Send invitation to team member
+  app.post("/api/team-members/invite", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const requestSchema = z.object({
+        name: z.string().min(1),
+        email: z.string().email(),
+        role: z.string().min(1),
+      });
+
+      const { name, email, role } = requestSchema.parse(req.body);
+
+      // Check if email already exists
+      const existingMember = await storage.getTeamMemberByEmail(email);
+      if (existingMember) {
+        return res.status(400).json({ error: "Team member with this email already exists" });
+      }
+
+      // Generate secure invitation token
+      const invitationToken = crypto.randomBytes(32).toString('hex');
+
+      // Create team member with pending status
+      const member = await storage.createTeamMember({
+        userId,
+        name,
+        email,
+        role,
+        avatar: null,
+      });
+
+      // Update with invitation token and status
+      await storage.updateTeamMember(member.id, {
+        invitationToken,
+        invitationStatus: 'pending',
+        invitedAt: new Date(),
+      });
+
+      // TODO: Send invitation email with link containing token
+      // For MVP, return the invitation link in response
+      const invitationLink = `${req.protocol}://${req.hostname}/accept-invitation?token=${invitationToken}`;
+
+      res.json({
+        member,
+        invitationLink,
+        message: "Team member invited successfully. Share this link with them to complete registration.",
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromZodError(error).message });
+      }
+      console.error("Error inviting team member:", error);
+      res.status(500).json({ error: "Failed to invite team member" });
+    }
+  });
+
+  // Accept invitation and set password
+  app.post("/api/team-members/accept-invitation", async (req, res) => {
+    try {
+      const requestSchema = z.object({
+        token: z.string().min(1),
+        password: z.string().min(8, "Password must be at least 8 characters"),
+      });
+
+      const { token, password } = requestSchema.parse(req.body);
+
+      // Find team member by invitation token
+      const member = await storage.getTeamMemberByInvitationToken(token);
+      if (!member) {
+        return res.status(404).json({ error: "Invalid or expired invitation token" });
+      }
+
+      if (member.invitationStatus === 'accepted') {
+        return res.status(400).json({ error: "Invitation already accepted" });
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Update team member with password and accepted status
+      await storage.updateTeamMember(member.id, {
+        passwordHash,
+        invitationStatus: 'accepted',
+        acceptedAt: new Date(),
+        invitationToken: null, // Clear token after use
+      });
+
+      res.json({
+        message: "Invitation accepted successfully. You can now login.",
+        email: member.email,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromZodError(error).message });
+      }
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ error: "Failed to accept invitation" });
+    }
+  });
+
+  // Team member login
+  app.post("/api/team-members/login", async (req, res) => {
+    try {
+      const requestSchema = z.object({
+        email: z.string().email(),
+        password: z.string().min(1),
+      });
+
+      const { email, password } = requestSchema.parse(req.body);
+
+      // Find team member by email
+      const member = await storage.getTeamMemberByEmail(email);
+      if (!member) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      if (member.invitationStatus !== 'accepted') {
+        return res.status(401).json({ error: "Please accept your invitation first" });
+      }
+
+      if (!member.passwordHash) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, member.passwordHash);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      // Update last login timestamp
+      await storage.updateTeamMember(member.id, {
+        lastLoginAt: new Date(),
+      });
+
+      // Store team member info in session
+      (req.session as any).teamMember = {
+        id: member.id,
+        userId: member.userId,
+        email: member.email,
+        name: member.name,
+        role: member.role,
+        accountType: 'team_member',
+      };
+
+      res.json({
+        message: "Login successful",
+        teamMember: {
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          role: member.role,
+          accountType: 'team_member',
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromZodError(error).message });
+      }
+      console.error("Error logging in team member:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  // Team member logout
+  app.post("/api/team-members/logout", (req, res) => {
+    (req.session as any).teamMember = null;
+    res.json({ message: "Logged out successfully" });
+  });
+
+  // Get current team member info
+  app.get("/api/team-members/me", async (req: any, res) => {
+    try {
+      const teamMember = (req.session as any)?.teamMember;
+      if (!teamMember) {
+        return res.status(401).json({ error: "Not authenticated as team member" });
+      }
+
+      // Fetch fresh team member data
+      const member = await storage.getTeamMember(teamMember.id);
+      if (!member) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+
+      // Get team member's assigned tasks
+      const tasks = await storage.getTasks(member.userId);
+      const assignedTasks = tasks.filter(task => task.teamMemberId === member.id);
+
+      res.json({
+        ...member,
+        passwordHash: undefined, // Don't send password hash
+        invitationToken: undefined, // Don't send token
+        assignedTasks: assignedTasks.length,
+      });
+    } catch (error) {
+      console.error("Error fetching team member info:", error);
+      res.status(500).json({ error: "Failed to fetch team member info" });
+    }
+  });
 
   // Get all team members
   app.get("/api/team-members", isAuthenticated, async (req: any, res) => {

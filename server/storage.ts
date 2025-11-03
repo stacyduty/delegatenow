@@ -21,6 +21,8 @@ export interface IStorage {
   // Team member operations
   getTeamMembers(userId: string): Promise<TeamMember[]>;
   getTeamMember(id: string): Promise<TeamMember | undefined>;
+  getTeamMemberByEmail(email: string): Promise<TeamMember | undefined>;
+  getTeamMemberByInvitationToken(token: string): Promise<TeamMember | undefined>;
   createTeamMember(member: InsertTeamMember): Promise<TeamMember>;
   updateTeamMember(id: string, member: Partial<TeamMember>): Promise<TeamMember | undefined>;
   deleteTeamMember(id: string): Promise<void>;
@@ -93,6 +95,16 @@ export class DbStorage implements IStorage {
 
   async getTeamMember(id: string): Promise<TeamMember | undefined> {
     const result = await db.select().from(teamMembers).where(eq(teamMembers.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getTeamMemberByEmail(email: string): Promise<TeamMember | undefined> {
+    const result = await db.select().from(teamMembers).where(eq(teamMembers.email, email)).limit(1);
+    return result[0];
+  }
+
+  async getTeamMemberByInvitationToken(token: string): Promise<TeamMember | undefined> {
+    const result = await db.select().from(teamMembers).where(eq(teamMembers.invitationToken, token)).limit(1);
     return result[0];
   }
 

@@ -46,9 +46,22 @@ export const teamMembers = pgTable("team_members", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  email: text("email").notNull(),
-  role: text("role").notNull(),
+  email: text("email").notNull().unique(),
+  role: text("role").notNull(), // Job role/title (e.g., "Marketing Manager", "Software Engineer")
   avatar: text("avatar"),
+  
+  // Authentication fields
+  passwordHash: text("password_hash"), // bcrypt hash
+  invitationStatus: text("invitation_status").default("pending"), // pending, accepted, declined
+  invitationToken: text("invitation_token"), // Secure token for email invitation
+  invitedAt: timestamp("invited_at"),
+  acceptedAt: timestamp("accepted_at"),
+  lastLoginAt: timestamp("last_login_at"),
+  
+  // Permissions
+  accountType: text("account_type").default("team_member"), // team_member (limited access) vs executive (full access)
+  
+  // Performance tracking
   activeTasks: integer("active_tasks").default(0),
   completedTasks: integer("completed_tasks").default(0),
   completionRate: integer("completion_rate").default(0), // percentage
@@ -57,6 +70,13 @@ export const teamMembers = pgTable("team_members", {
 
 export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
   id: true,
+  passwordHash: true,
+  invitationStatus: true,
+  invitationToken: true,
+  invitedAt: true,
+  acceptedAt: true,
+  lastLoginAt: true,
+  accountType: true,
   activeTasks: true,
   completedTasks: true,
   completionRate: true,

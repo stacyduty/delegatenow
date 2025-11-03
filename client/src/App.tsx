@@ -18,6 +18,8 @@ import Settings from "@/pages/Settings";
 import VoiceHistory from "@/pages/VoiceHistory";
 import Landing from "@/pages/Landing";
 import ProblemFlowDemo from "@/pages/ProblemFlowDemo";
+import TeamMemberLogin from "@/pages/TeamMemberLogin";
+import AcceptInvitation from "@/pages/AcceptInvitation";
 import NotFound from "@/pages/not-found";
 import { useState, useEffect } from "react";
 import { syncPendingMutations, setupOnlineListener } from "@/lib/offlineSync";
@@ -49,6 +51,8 @@ function Router() {
       {/* Public routes */}
       <Route path="/landing" component={Landing} />
       <Route path="/flow" component={ProblemFlowDemo} />
+      <Route path="/team-login" component={TeamMemberLogin} />
+      <Route path="/accept-invitation" component={AcceptInvitation} />
       
       {/* Protected routes */}
       <Route path="/">
@@ -164,10 +168,10 @@ function App() {
     "--sidebar-width-icon": "4rem",
   };
 
-  // Landing page and flow demo don't need sidebar
-  const isLandingPage = location === "/landing" || location === "/flow";
+  // Public pages don't need sidebar
+  const isPublicPage = location === "/landing" || location === "/flow" || location === "/team-login" || location === "/accept-invitation";
 
-  if (isLandingPage) {
+  if (isPublicPage) {
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
