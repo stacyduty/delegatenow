@@ -10,7 +10,7 @@ interface TaskCardProps {
   title: string;
   impact: "low" | "medium" | "high";
   urgency: "low" | "medium" | "high";
-  assignee: {
+  assignee?: {
     name: string;
     avatar?: string;
   };
