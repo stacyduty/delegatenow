@@ -10,6 +10,7 @@ import NotificationBell from "@/components/NotificationBell";
 import Dashboard from "@/pages/Dashboard";
 import Tasks from "@/pages/Tasks";
 import Team from "@/pages/Team";
+import Analytics from "@/pages/Analytics";
 import Landing from "@/pages/Landing";
 import NotFound from "@/pages/not-found";
 import { useState } from "react";
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/team" component={Team} />
+      <Route path="/analytics" component={Analytics} />
       <Route component={NotFound} />
     </Switch>
   );
