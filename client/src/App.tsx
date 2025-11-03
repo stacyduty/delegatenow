@@ -1,6 +1,6 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -21,19 +21,53 @@ import { useState, useEffect } from "react";
 import { syncPendingMutations, setupOnlineListener } from "@/lib/offlineSync";
 import { initDB } from "@/lib/offlineStorage";
 
+// Protected route component
+function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType<any>, path?: string }) {
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['/api/auth/user'],
+    retry: false,
+  });
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Redirect to="/landing" />;
+  }
+
+  return <Component {...rest} />;
+}
+
 function Router() {
   const [location] = useLocation();
 
   return (
     <Switch>
+      {/* Public routes */}
       <Route path="/landing" component={Landing} />
       <Route path="/flow" component={ProblemFlowDemo} />
-      <Route path="/" component={Dashboard} />
-      <Route path="/tasks" component={Tasks} />
-      <Route path="/team" component={Team} />
-      <Route path="/analytics" component={Analytics} />
-      <Route path="/voice-history" component={VoiceHistory} />
-      <Route path="/settings" component={Settings} />
+      
+      {/* Protected routes */}
+      <Route path="/">
+        <ProtectedRoute component={Dashboard} />
+      </Route>
+      <Route path="/tasks">
+        <ProtectedRoute component={Tasks} />
+      </Route>
+      <Route path="/team">
+        <ProtectedRoute component={Team} />
+      </Route>
+      <Route path="/analytics">
+        <ProtectedRoute component={Analytics} />
+      </Route>
+      <Route path="/voice-history">
+        <ProtectedRoute component={VoiceHistory} />
+      </Route>
+      <Route path="/settings">
+        <ProtectedRoute component={Settings} />
+      </Route>
+      
       <Route component={NotFound} />
     </Switch>
   );

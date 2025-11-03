@@ -1,10 +1,31 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Mic, Users, Brain, CheckCircle2, ArrowRight, TrendingUp, Zap, Clock, DollarSign } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 export default function Landing() {
+  const [, setLocation] = useLocation();
+
+  // Check if user is already authenticated
+  const { data: user } = useQuery({
+    queryKey: ['/api/auth/user'],
+    retry: false,
+  });
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (user) {
+      setLocation('/');
+    }
+  }, [user, setLocation]);
+
+  const handleLogin = () => {
+    window.location.href = '/api/login';
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -20,11 +41,11 @@ export default function Landing() {
             </div>
           </div>
           <nav className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild data-testid="link-signin">
-              <Link href="/">Sign In</Link>
+            <Button variant="ghost" size="sm" onClick={handleLogin} data-testid="link-signin">
+              Sign In
             </Button>
-            <Button size="sm" asChild data-testid="button-get-started">
-              <Link href="/">Get Started</Link>
+            <Button size="sm" onClick={handleLogin} data-testid="button-get-started">
+              Get Started
             </Button>
           </nav>
         </div>
@@ -46,8 +67,8 @@ export default function Landing() {
           Track everything in real-time. Unlimited team members.
         </p>
         <div className="flex items-center justify-center gap-4">
-          <Button size="lg" asChild data-testid="button-start-free">
-            <Link href="/">Start Free Trial</Link>
+          <Button size="lg" onClick={handleLogin} data-testid="button-start-free">
+            Start Free Trial
           </Button>
           <Button size="lg" variant="outline" asChild data-testid="link-learn-more">
             <a href="#workflow">Learn More</a>
@@ -252,8 +273,8 @@ export default function Landing() {
             Join executives who save hours every week with voice-powered task delegation
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Button size="lg" variant="secondary" asChild data-testid="button-cta-start">
-              <Link href="/">Start Your Free Trial</Link>
+            <Button size="lg" variant="secondary" onClick={handleLogin} data-testid="button-cta-start">
+              Start Your Free Trial
             </Button>
           </div>
           <p className="text-sm mt-4 opacity-75">
