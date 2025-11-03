@@ -118,6 +118,18 @@ export async function queueMutation(mutation: Omit<PendingMutation, 'id' | 'time
   };
 
   await saveToStore('pendingMutations', pendingMutation);
+
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      if ('sync' in registration) {
+        await (registration as any).sync.register('sync-mutations');
+        console.log('Background sync registered for mutations');
+      }
+    } catch (err) {
+      console.log('Background sync registration failed (may not be supported):', err);
+    }
+  }
 }
 
 export async function getPendingMutations(): Promise<PendingMutation[]> {

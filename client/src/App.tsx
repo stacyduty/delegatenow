@@ -41,13 +41,25 @@ function App() {
   const [location] = useLocation();
 
   useEffect(() => {
-    initDB().catch((err) => console.error('Failed to initialize IndexedDB:', err));
+    async function initializeOffline() {
+      try {
+        await initDB();
+        
+        await syncPendingMutations();
+        queryClient.invalidateQueries({ queryKey: ['pendingMutations'] });
+        console.log('Initial sync complete');
+      } catch (err) {
+        console.error('Failed to initialize offline functionality:', err);
+      }
+    }
+
+    initializeOffline();
 
     const cleanup = setupOnlineListener(() => {
       syncPendingMutations()
         .then(() => {
           queryClient.invalidateQueries({ queryKey: ['pendingMutations'] });
-          console.log('Successfully synced pending mutations');
+          console.log('Successfully synced pending mutations on reconnect');
         })
         .catch((err) => console.error('Failed to sync mutations:', err));
     });
@@ -55,7 +67,9 @@ function App() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'SYNC_MUTATIONS') {
-          syncPendingMutations();
+          syncPendingMutations().then(() => {
+            queryClient.invalidateQueries({ queryKey: ['pendingMutations'] });
+          });
         }
       });
     }
