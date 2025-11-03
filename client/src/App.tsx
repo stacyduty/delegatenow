@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import ThemeToggle from "@/components/ThemeToggle";
 import NotificationBell from "@/components/NotificationBell";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import Dashboard from "@/pages/Dashboard";
 import Tasks from "@/pages/Tasks";
 import Team from "@/pages/Team";
@@ -15,7 +16,9 @@ import Settings from "@/pages/Settings";
 import VoiceHistory from "@/pages/VoiceHistory";
 import Landing from "@/pages/Landing";
 import NotFound from "@/pages/not-found";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { syncPendingMutations, setupOnlineListener } from "@/lib/offlineSync";
+import { initDB } from "@/lib/offlineStorage";
 
 function Router() {
   const [location] = useLocation();
@@ -36,6 +39,29 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
+
+  useEffect(() => {
+    initDB().catch((err) => console.error('Failed to initialize IndexedDB:', err));
+
+    const cleanup = setupOnlineListener(() => {
+      syncPendingMutations()
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['pendingMutations'] });
+          console.log('Successfully synced pending mutations');
+        })
+        .catch((err) => console.error('Failed to sync mutations:', err));
+    });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SYNC_MUTATIONS') {
+          syncPendingMutations();
+        }
+      });
+    }
+
+    return cleanup;
+  }, []);
 
   // Mock notifications - todo: remove mock functionality
   const [notifications, setNotifications] = useState([
@@ -112,6 +138,7 @@ function App() {
                   <ThemeToggle />
                 </div>
               </header>
+              <OfflineIndicator />
               <main className="flex-1 overflow-auto">
                 <div className="container mx-auto p-6 max-w-[1600px]">
                   <Router />

@@ -136,6 +136,17 @@ Preferred communication style: Simple, everyday language.
 - Dashboard statistics computed server-side on demand
 - No WebSocket implementation - relies on polling via React Query refetch
 
+**Offline Functionality:**
+- IndexedDB-based offline storage for all API data (tasks, team members, analytics, voice history, notifications)
+- Automatic caching of API responses when online
+- Fallback to cached data when offline
+- Mutation queue system for create/update/delete operations while offline
+- Background sync to process queued mutations when connection restored
+- Service worker pre-caches all app routes for offline access
+- Voice recording queue for offline voice delegations
+- Real-time offline status indicator showing connection state and pending sync operations
+- Seamless online/offline transitions with automatic data synchronization
+
 **Styling Philosophy:**
 - Utility-first with Tailwind
 - Custom elevation system (`hover-elevate`, `active-elevate-2`) for consistent interaction states
