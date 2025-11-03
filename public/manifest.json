@@ -1,0 +1,24 @@
+{
+  "name": "Delig8te - AI Executive Task Delegation",
+  "short_name": "Delig8te",
+  "description": "Voice-activated AI task delegation for executives. Automated prioritization, team management, and real-time tracking.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "screenshots": []
+}
