@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -84,6 +84,11 @@ export const tasks = pgTable("tasks", {
   // Status tracking
   status: text("status").notNull().default("delegated"), // delegated, in_progress, review, completed
   progress: integer("progress").default(0), // 0-100
+  
+  // Compliance & Governance fields
+  acceptedAt: timestamp("accepted_at"), // Formal acceptance timestamp for audit trail
+  expiryDate: timestamp("expiry_date"), // When delegation authority expires
+  spendingLimit: numeric("spending_limit", { precision: 15, scale: 2 }), // Optional financial authority cap
   
   // Dates
   dueDate: timestamp("due_date"),
