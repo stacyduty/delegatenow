@@ -11,6 +11,8 @@ import Dashboard from "@/pages/Dashboard";
 import Tasks from "@/pages/Tasks";
 import Team from "@/pages/Team";
 import Analytics from "@/pages/Analytics";
+import Settings from "@/pages/Settings";
+import VoiceHistory from "@/pages/VoiceHistory";
 import Landing from "@/pages/Landing";
 import NotFound from "@/pages/not-found";
 import { useState } from "react";
@@ -25,6 +27,8 @@ function Router() {
       <Route path="/tasks" component={Tasks} />
       <Route path="/team" component={Team} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/voice-history" component={VoiceHistory} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
