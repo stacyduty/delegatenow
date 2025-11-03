@@ -75,10 +75,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create task with AI analysis from voice transcript
   app.post("/api/tasks/analyze", async (req: any, res) => {
     try {
-      const { transcript } = req.body;
-      if (!transcript) {
-        return res.status(400).json({ error: "Transcript is required" });
-      }
+      // Validate request body
+      const requestSchema = z.object({
+        transcript: z.string().min(1, "Transcript cannot be empty"),
+      });
+      
+      const { transcript } = requestSchema.parse(req.body);
 
       // Get team members for AI to suggest assignee
       const teamMembers = await storage.getTeamMembers(req.user.id);
@@ -140,6 +142,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ task, analysis });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromZodError(error).message });
+      }
       console.error("Error analyzing task:", error);
       res.status(500).json({ error: "Failed to analyze task" });
     }
