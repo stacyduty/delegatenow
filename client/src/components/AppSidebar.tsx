@@ -56,10 +56,10 @@ export default function AppSidebar({ activeItem = "/" }: AppSidebarProps) {
       <SidebarHeader className="p-6 border-b">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary text-primary-foreground font-bold text-lg">
-            D8
+            DN
           </div>
           <div>
-            <h2 className="font-bold text-lg">Delig8te</h2>
+            <h2 className="font-bold text-lg">DelegateNow</h2>
             <p className="text-xs text-muted-foreground">WeighPay Group Inc.</p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function AppSidebar({ activeItem = "/" }: AppSidebarProps) {
           <Crown className="h-4 w-4 text-chart-4" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">Executive Plan</p>
-            <p className="text-xs text-muted-foreground">$1/month</p>
+            <p className="text-xs text-muted-foreground">$1/month/user</p>
           </div>
           <Badge variant="secondary" className="bg-status-online/20 text-status-online">
             Active

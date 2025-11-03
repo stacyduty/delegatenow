@@ -1,6 +1,6 @@
-const CACHE_NAME = 'delig8te-v2';
-const STATIC_CACHE = 'delig8te-static-v2';
-const DYNAMIC_CACHE = 'delig8te-dynamic-v2';
+const CACHE_NAME = 'delegatenow-v2';
+const STATIC_CACHE = 'delegatenow-static-v2';
+const DYNAMIC_CACHE = 'delegatenow-dynamic-v2';
 
 const STATIC_URLS = [
   '/',

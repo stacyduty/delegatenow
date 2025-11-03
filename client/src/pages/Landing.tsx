@@ -36,7 +36,7 @@ export default function Landing() {
               <Zap className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Delig8te</h1>
+              <h1 className="text-xl font-bold text-foreground">DelegateNow</h1>
               <p className="text-xs text-muted-foreground">by WeighPay Group Inc.</p>
             </div>
           </div>
@@ -55,7 +55,7 @@ export default function Landing() {
       <section className="container mx-auto max-w-7xl px-6 py-20 text-center">
         <Badge className="mb-6" variant="outline" data-testid="badge-price">
           <DollarSign className="h-3 w-3 mr-1" />
-          Just $1/month
+          Just $1/month/user
         </Badge>
         <h1 className="text-5xl font-bold mb-6 text-foreground">
           Voice-Powered Task Delegation
@@ -75,14 +75,14 @@ export default function Landing() {
           </Button>
         </div>
         <p className="text-sm text-muted-foreground mt-4">
-          No credit card required • Unlimited team members • Cancel anytime
+          14-day free trial • No credit card needed • Cancel anytime
         </p>
       </section>
 
       {/* Workflow Flowchart Section */}
       <section id="workflow" className="container mx-auto max-w-7xl px-6 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4 text-foreground">How Delig8te Works</h2>
+          <h2 className="text-4xl font-bold mb-4 text-foreground">How DelegateNow Works</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             From voice to completion in four intelligent steps
           </p>
@@ -259,7 +259,7 @@ export default function Landing() {
             <DollarSign className="h-10 w-10 text-primary mb-4" />
             <h3 className="text-xl font-semibold mb-2 text-foreground">Unbeatable Value</h3>
             <p className="text-muted-foreground">
-              Just $1/month via Stripe. Enterprise features without enterprise pricing.
+              Just $1/month/user via Stripe. Enterprise features without enterprise pricing.
             </p>
           </Card>
         </div>
@@ -268,7 +268,7 @@ export default function Landing() {
       {/* Comparison Section */}
       <section className="container mx-auto max-w-7xl px-6 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4 text-foreground">How Delig8te Compares</h2>
+          <h2 className="text-4xl font-bold mb-4 text-foreground">How DelegateNow Compares</h2>
           <p className="text-lg text-muted-foreground">
             Enterprise-grade compliance meets modern AI productivity
           </p>
@@ -333,9 +333,9 @@ export default function Landing() {
             </div>
           </Card>
 
-          {/* Delig8te */}
-          <Card className="p-8 bg-primary/5 border-primary" data-testid="card-comparison-deligate">
-            <h3 className="text-2xl font-bold mb-2 text-primary">Delig8te</h3>
+          {/* DelegateNow */}
+          <Card className="p-8 bg-primary/5 border-primary" data-testid="card-comparison-delegatenow">
+            <h3 className="text-2xl font-bold mb-2 text-primary">DelegateNow</h3>
             <p className="text-sm text-muted-foreground mb-6">AI-powered productivity + compliance</p>
             
             <div className="space-y-4">
@@ -354,8 +354,8 @@ export default function Landing() {
                   <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">$1/month total cost</p>
-                  <p className="text-sm text-muted-foreground">No setup fees, unlimited team members</p>
+                  <p className="font-semibold text-foreground">$1/month/user</p>
+                  <p className="text-sm text-muted-foreground">No setup fees, simple per-user pricing</p>
                 </div>
               </div>
 
@@ -422,7 +422,7 @@ export default function Landing() {
             </Button>
           </div>
           <p className="text-sm mt-4 opacity-75">
-            14-day free trial • Then just $1/month • Cancel anytime
+            14-day free trial • No credit card needed • Then just $1/month/user
           </p>
         </Card>
       </section>
@@ -436,7 +436,7 @@ export default function Landing() {
                 <Zap className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">Delig8te</p>
+                <p className="text-sm font-semibold text-foreground">DelegateNow</p>
                 <p className="text-xs text-muted-foreground">© 2024 WeighPay Group Inc.</p>
               </div>
             </div>

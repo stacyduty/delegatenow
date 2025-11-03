@@ -1,4 +1,4 @@
-# Delig8te - Design Guidelines
+# DelegateNow - Design Guidelines
 
 ## Design Approach
 
@@ -178,7 +178,7 @@ Drawing inspiration from Linear's precision, Asana's clarity, and Monday.com's h
 
 **Subscription Card:**
 - Featured card on settings page
-- Current plan: "Executive Plan - $1/month"
+- Current plan: "Executive Plan - $1/month/user"
 - Team size: "Unlimited members"
 - Stripe-powered badge
 - Manage subscription button (secondary style)

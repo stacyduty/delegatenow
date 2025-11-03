@@ -65,7 +65,7 @@ function PaymentForm({ onSuccess }: { onSuccess: () => void }) {
       } else {
         toast({
           title: "Subscription Active!",
-          description: "Welcome to Delig8te Executive Plan",
+          description: "Welcome to DelegateNow Executive Plan",
         });
         onSuccess();
       }
@@ -97,7 +97,7 @@ function PaymentForm({ onSuccess }: { onSuccess: () => void }) {
         ) : (
           <>
             <Crown className="mr-2 h-4 w-4" />
-            Start Executive Plan - $1/month
+            Start Executive Plan - $1/month/user
           </>
         )}
       </Button>
@@ -161,7 +161,7 @@ export function SubscriptionOnboarding({ open, onOpenChange }: {
                   <Zap className="h-6 w-6 text-primary-foreground" />
                 </div>
                 <div>
-                  <DialogTitle className="text-2xl">Welcome to Delig8te!</DialogTitle>
+                  <DialogTitle className="text-2xl">Welcome to DelegateNow!</DialogTitle>
                   <DialogDescription>
                     Start your Executive Plan to unlock all features
                   </DialogDescription>
@@ -184,11 +184,11 @@ export function SubscriptionOnboarding({ open, onOpenChange }: {
                   </div>
                   <div className="text-right">
                     <div className="text-4xl font-bold">$1</div>
-                    <div className="text-sm text-muted-foreground">per month</div>
+                    <div className="text-sm text-muted-foreground">per month/user</div>
                   </div>
                 </div>
                 <Badge variant="default" className="mb-4" data-testid="badge-trial">
-                  14-day free trial • Then $1/month
+                  14-day free trial • No credit card needed • Then $1/month/user
                 </Badge>
               </Card>
 

@@ -10,7 +10,7 @@ export function DelegationMindMap() {
         <Badge variant="default" className="mb-4" data-testid="badge-inspired">
           Inspired by Noemi Kis's Framework
         </Badge>
-        <h2 className="text-4xl font-bold mb-4">How Delig8te Automates Better Delegation</h2>
+        <h2 className="text-4xl font-bold mb-4">How DelegateNow Automates Better Delegation</h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           What takes 15 minutes manually now happens in 30 seconds with voice + AI
         </p>
@@ -21,7 +21,7 @@ export function DelegationMindMap() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="w-5 h-5" />
-            The Manual Process (Before Delig8te)
+            The Manual Process (Before DelegateNow)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -37,7 +37,7 @@ export function DelegationMindMap() {
         </CardContent>
       </Card>
 
-      {/* Mind Map - Delig8te's Automated Process */}
+      {/* Mind Map - DelegateNow's Automated Process */}
       <div className="relative">
         {/* Center Node - Voice Input */}
         <div className="flex justify-center mb-12">
@@ -90,7 +90,7 @@ export function DelegationMindMap() {
               </div>
               <div className="mt-4 p-2 bg-muted rounded text-xs">
                 <strong>Manual:</strong> 3-4 minutes<br/>
-                <strong>Delig8te:</strong> Instant
+                <strong>DelegateNow:</strong> Instant
               </div>
             </CardContent>
           </Card>
@@ -119,7 +119,7 @@ export function DelegationMindMap() {
               </div>
               <div className="mt-4 p-2 bg-muted rounded text-xs">
                 <strong>Manual:</strong> 2-3 minutes<br/>
-                <strong>Delig8te:</strong> Instant
+                <strong>DelegateNow:</strong> Instant
               </div>
             </CardContent>
           </Card>
@@ -148,7 +148,7 @@ export function DelegationMindMap() {
               </div>
               <div className="mt-4 p-2 bg-muted rounded text-xs">
                 <strong>Manual:</strong> 5-8 minutes<br/>
-                <strong>Delig8te:</strong> Instant
+                <strong>DelegateNow:</strong> Instant
               </div>
             </CardContent>
           </Card>
@@ -177,7 +177,7 @@ export function DelegationMindMap() {
               </div>
               <div className="mt-4 p-2 bg-muted rounded text-xs">
                 <strong>Manual:</strong> 3-5 minutes<br/>
-                <strong>Delig8te:</strong> Instant
+                <strong>DelegateNow:</strong> Instant
               </div>
             </CardContent>
           </Card>
@@ -223,7 +223,7 @@ export function DelegationMindMap() {
                 </div>
                 <ArrowRight className="w-8 h-8 text-muted-foreground" />
                 <div>
-                  <div className="text-primary font-bold">Delig8te</div>
+                  <div className="text-primary font-bold">DelegateNow</div>
                   <div className="text-2xl">30 sec</div>
                 </div>
               </div>
@@ -242,7 +242,7 @@ export function DelegationMindMap() {
           <h3 className="text-xl font-bold mb-4">The Difference?</h3>
           <p className="text-muted-foreground max-w-3xl mx-auto">
             Noemi Kis's framework is brilliant for understanding <em>how to think</em> about delegation.
-            Delig8te takes that framework and <strong>automates every single step</strong> using voice recognition + AI.
+            DelegateNow takes that framework and <strong>automates every single step</strong> using voice recognition + AI.
             You get all the benefits of expert prioritization without the manual work.
           </p>
         </div>

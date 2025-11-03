@@ -1,4 +1,4 @@
-const DB_NAME = 'delig8te-offline';
+const DB_NAME = 'delegatenow-offline';
 const DB_VERSION = 1;
 
 export interface OfflineStore {

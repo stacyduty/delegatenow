@@ -1,12 +1,12 @@
-# Delig8te - AI Executive Task Delegation Platform
+# DelegateNow - AI Executive Task Delegation Platform
 
 ## Overview
 
-Delig8te is a voice-powered task delegation platform designed for executives to efficiently manage teams and tasks. The application enables users to speak their tasks, leveraging AI to analyze, prioritize, and delegate work automatically. Built with a modern tech stack, it features real-time task tracking, team management, and analytics with an emphasis on executive productivity and minimal friction.
+DelegateNow is a voice-powered task delegation platform designed for executives to efficiently manage teams and tasks. The application enables users to speak their tasks, leveraging AI to analyze, prioritize, and delegate work automatically. Built with a modern tech stack, it features real-time task tracking, team management, and analytics with an emphasis on executive productivity and minimal friction.
 
 **Core Value Proposition:** Transform voice input into structured, delegated tasks with AI-powered analysis including impact assessment, urgency classification, and SMART objectives generation. Now includes enterprise-grade compliance features: formal task acceptance timestamps, expiry tracking, spending limits, and complete audit trails.
 
-**Competitive Advantage:** Combines the AI-powered speed and productivity of modern tools ($1/month, instant deployment, voice-first interface) with the compliance and governance features of enterprise delegation platforms (acceptance records, expiry management, audit trails) - without the $10k-15k setup fees or 7-180 day deployment times.
+**Competitive Advantage:** Combines the AI-powered speed and productivity of modern tools ($1/month/user, instant deployment, voice-first interface, 14-day free trial with no credit card needed) with the compliance and governance features of enterprise delegation platforms (acceptance records, expiry management, audit trails) - without the $10k-15k setup fees or 7-180 day deployment times.
 
 ## User Preferences
 
@@ -135,9 +135,10 @@ Preferred communication style: Simple, everyday language.
 - Phase 2 could add: team member authentication, multi-level approvals, SSO integration, advanced reporting
 
 **Competitive Analysis Results:**
-- **vs. iDelegate**: 1000x more affordable ($1/mo vs $10k-15k setup), instant deployment (minutes vs 7-180 days), AI-powered vs manual entry
+- **vs. iDelegate**: 1000x more affordable ($1/mo/user vs $10k-15k setup), instant deployment (minutes vs 7-180 days), AI-powered vs manual entry
 - **vs. Traditional Tools**: Combines modern AI productivity with enterprise compliance without the enterprise price tag
 - **Unique Position**: Only delegation tool offering voice-first AI with formal audit trails at consumer pricing
+- **Pricing Model**: $1/month/user with 14-day free trial (no credit card needed until trial ends)
 
 ### Key Architectural Decisions
 

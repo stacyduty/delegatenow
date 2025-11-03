@@ -1,7 +1,7 @@
 {
-  "name": "Delig8te - AI Executive Task Delegation",
-  "short_name": "Delig8te",
-  "description": "Voice-activated AI task delegation for executives. Automated prioritization, team management, and real-time tracking.",
+  "name": "DelegateNow - AI Executive Task Delegation",
+  "short_name": "DelegateNow",
+  "description": "Voice-activated AI task delegation for executives. Automated prioritization, team management, and real-time tracking. $1/month/user.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
