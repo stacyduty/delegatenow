@@ -10,6 +10,7 @@ import NotificationBell from "@/components/NotificationBell";
 import Dashboard from "@/pages/Dashboard";
 import Tasks from "@/pages/Tasks";
 import Team from "@/pages/Team";
+import Landing from "@/pages/Landing";
 import NotFound from "@/pages/not-found";
 import { useState } from "react";
 
@@ -18,6 +19,7 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/landing" component={Landing} />
       <Route path="/" component={Dashboard} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/team" component={Team} />
@@ -71,6 +73,20 @@ function App() {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
   };
+
+  // Landing page doesn't need sidebar
+  const isLandingPage = location === "/landing";
+
+  if (isLandingPage) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
