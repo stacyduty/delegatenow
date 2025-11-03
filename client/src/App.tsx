@@ -15,6 +15,7 @@ import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
 import VoiceHistory from "@/pages/VoiceHistory";
 import Landing from "@/pages/Landing";
+import ProblemFlowDemo from "@/pages/ProblemFlowDemo";
 import NotFound from "@/pages/not-found";
 import { useState, useEffect } from "react";
 import { syncPendingMutations, setupOnlineListener } from "@/lib/offlineSync";
@@ -26,6 +27,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/landing" component={Landing} />
+      <Route path="/flow" component={ProblemFlowDemo} />
       <Route path="/" component={Dashboard} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/team" component={Team} />
@@ -120,8 +122,8 @@ function App() {
     "--sidebar-width-icon": "4rem",
   };
 
-  // Landing page doesn't need sidebar
-  const isLandingPage = location === "/landing";
+  // Landing page and flow demo don't need sidebar
+  const isLandingPage = location === "/landing" || location === "/flow";
 
   if (isLandingPage) {
     return (
