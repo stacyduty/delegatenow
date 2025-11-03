@@ -28,10 +28,13 @@ export default function Dashboard() {
 
   // Show onboarding for new users without active subscription
   useEffect(() => {
-    if (user && !user.subscriptionStatus) {
-      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-      if (!hasSeenOnboarding) {
-        setShowOnboarding(true);
+    if (user) {
+      const isActiveSubscription = user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing';
+      if (!isActiveSubscription) {
+        const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+        if (!hasSeenOnboarding) {
+          setShowOnboarding(true);
+        }
       }
     }
   }, [user]);
