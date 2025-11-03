@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { 
-  type User, type InsertUser,
+  type User, type InsertUser, type UpsertUser,
   type TeamMember, type InsertTeamMember,
   type Task, type InsertTask,
   type Notification, type InsertNotification,
@@ -12,10 +12,10 @@ import { eq, and, desc } from "drizzle-orm";
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: Partial<User>): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   
   // Team member operations
   getTeamMembers(userId: string): Promise<TeamMember[]>;
@@ -49,13 +49,8 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
-    return result[0];
-  }
-
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const result = await db.select().from(users).where(eq(users.email, email!)).limit(1);
     return result[0];
   }
 
@@ -67,6 +62,21 @@ export class DbStorage implements IStorage {
   async updateUser(id: string, user: Partial<User>): Promise<User | undefined> {
     const result = await db.update(users).set(user).where(eq(users.id, id)).returning();
     return result[0];
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   // Team member operations
