@@ -129,6 +129,11 @@ Preferred communication style: Simple, everyday language.
 4. **Delegation History/Audit Log Page** - Complete audit trail showing all delegations, acceptance status, expiry dates, and spending limits
 5. **Marketing Comparison** - Landing page highlights advantages over traditional delegation tools (iDelegate, etc.)
 
+**Current System Limitations (Phase 1):**
+- Team members are records without separate authentication; only executives (task owners) have login access and can accept tasks
+- The executive formally accepts the delegation on behalf of the organization
+- Phase 2 could add: team member authentication, multi-level approvals, SSO integration, advanced reporting
+
 **Competitive Analysis Results:**
 - **vs. iDelegate**: 1000x more affordable ($1/mo vs $10k-15k setup), instant deployment (minutes vs 7-180 days), AI-powered vs manual entry
 - **vs. Traditional Tools**: Combines modern AI productivity with enterprise compliance without the enterprise price tag
