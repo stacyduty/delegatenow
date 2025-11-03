@@ -91,12 +91,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const analysis = await analyzeVoiceTask(transcript, teamMemberNames);
       const processingTime = Date.now() - startTime;
 
+      console.log('[Voice Analysis] AI suggested assignee:', analysis.suggestedAssignee);
+      console.log('[Voice Analysis] Available team members:', teamMemberNames);
+
       // Find suggested team member
       let suggestedTeamMember = null;
       if (analysis.suggestedAssignee) {
         suggestedTeamMember = teamMembers.find(
           tm => tm.name.toLowerCase() === analysis.suggestedAssignee?.toLowerCase()
         );
+        console.log('[Voice Analysis] Matched team member:', suggestedTeamMember?.name || 'Not found');
       }
 
       // Create the task

@@ -49,12 +49,14 @@ export default function TaskCard({
   status,
   onClick,
 }: TaskCardProps) {
-  const initials = assignee.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const initials = assignee?.name
+    ? assignee.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "UN";
 
   return (
     <Card
@@ -87,10 +89,10 @@ export default function TaskCard({
 
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={assignee.avatar} alt={assignee.name} />
+            <AvatarImage src={assignee?.avatar} alt={assignee?.name || "Unassigned"} />
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
-          <span className="text-sm text-muted-foreground">{assignee.name}</span>
+          <span className="text-sm text-muted-foreground">{assignee?.name || "Unassigned"}</span>
         </div>
 
         <div className="space-y-2">

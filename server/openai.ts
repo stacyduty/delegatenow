@@ -32,7 +32,7 @@ export async function analyzeVoiceTask(transcript: string, teamMembers?: string[
 2. A detailed description
 3. Impact level (low/medium/high) - how much value this creates
 4. Urgency level (low/medium/high) - how time-sensitive it is
-5. Suggested assignee (if team members provided, pick the most suitable one based on the task)
+5. Suggested assignee - IMPORTANT: If a specific person is mentioned in the transcript, always suggest that exact person. Match the name exactly as it appears in the available team members list. Only suggest a different person if no one is mentioned in the transcript.
 6. SMART objectives breakdown:
    - Specific: What exactly needs to be done
    - Measurable: How will success be measured
@@ -43,6 +43,8 @@ export async function analyzeVoiceTask(transcript: string, teamMembers?: string[
 ${teamMemberList}
 
 Voice transcript: "${transcript}"
+
+IMPORTANT: If the transcript mentions a specific person by name (e.g., "I need [Name] to..."), you MUST use that exact name as the suggestedAssignee. Match it exactly from the available team members list.
 
 Return ONLY valid JSON with this exact structure:
 {
