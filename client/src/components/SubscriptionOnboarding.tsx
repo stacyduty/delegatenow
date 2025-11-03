@@ -65,7 +65,7 @@ function PaymentForm({ onSuccess }: { onSuccess: () => void }) {
       } else {
         toast({
           title: "Subscription Active!",
-          description: "Welcome to DelegateNow Executive Plan",
+          description: "Welcome to Deleg8te.ai Executive Plan",
         });
         onSuccess();
       }
@@ -161,7 +161,7 @@ export function SubscriptionOnboarding({ open, onOpenChange }: {
                   <Zap className="h-6 w-6 text-primary-foreground" />
                 </div>
                 <div>
-                  <DialogTitle className="text-2xl">Welcome to DelegateNow!</DialogTitle>
+                  <DialogTitle className="text-2xl">Welcome to Deleg8te.ai!</DialogTitle>
                   <DialogDescription>
                     Start your Executive Plan to unlock all features
                   </DialogDescription>

@@ -81,11 +81,11 @@ export function ProblemSolutionFlow() {
           </CardContent>
         </Card>
 
-        {/* DelegateNow Way - Solutions */}
+        {/* Deleg8te.ai Way - Solutions */}
         <Card className="border-primary/50 bg-primary/5">
           <CardContent className="p-6">
             <div className="flex items-center gap-2 mb-6">
-              <Badge variant="default" data-testid="badge-delegatenow">The DelegateNow Way</Badge>
+              <Badge variant="default" data-testid="badge-delegatenow">The Deleg8te.ai Way</Badge>
               <Zap className="w-5 h-5 text-primary" />
             </div>
 

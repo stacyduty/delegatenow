@@ -56,10 +56,10 @@ export default function AppSidebar({ activeItem = "/" }: AppSidebarProps) {
       <SidebarHeader className="p-6 border-b">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary text-primary-foreground font-bold text-lg">
-            DN
+            D8
           </div>
           <div>
-            <h2 className="font-bold text-lg">DelegateNow</h2>
+            <h2 className="font-bold text-lg">Deleg8te.ai</h2>
             <p className="text-xs text-muted-foreground">WeighPay Group Inc.</p>
           </div>
         </div>

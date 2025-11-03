@@ -36,7 +36,7 @@ export default function Landing() {
               <Zap className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">DelegateNow</h1>
+              <h1 className="text-xl font-bold text-foreground">Deleg8te.ai</h1>
               <p className="text-xs text-muted-foreground">by WeighPay Group Inc.</p>
             </div>
           </div>
@@ -82,7 +82,7 @@ export default function Landing() {
       {/* Workflow Flowchart Section */}
       <section id="workflow" className="container mx-auto max-w-7xl px-6 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4 text-foreground">How DelegateNow Works</h2>
+          <h2 className="text-4xl font-bold mb-4 text-foreground">How Deleg8te.ai Works</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             From voice to completion in four intelligent steps
           </p>
@@ -268,7 +268,7 @@ export default function Landing() {
       {/* Comparison Section */}
       <section className="container mx-auto max-w-7xl px-6 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4 text-foreground">How DelegateNow Compares</h2>
+          <h2 className="text-4xl font-bold mb-4 text-foreground">How Deleg8te.ai Compares</h2>
           <p className="text-lg text-muted-foreground">
             Enterprise-grade compliance meets modern AI productivity
           </p>
@@ -333,9 +333,9 @@ export default function Landing() {
             </div>
           </Card>
 
-          {/* DelegateNow */}
+          {/* Deleg8te.ai */}
           <Card className="p-8 bg-primary/5 border-primary" data-testid="card-comparison-delegatenow">
-            <h3 className="text-2xl font-bold mb-2 text-primary">DelegateNow</h3>
+            <h3 className="text-2xl font-bold mb-2 text-primary">Deleg8te.ai</h3>
             <p className="text-sm text-muted-foreground mb-6">AI-powered productivity + compliance</p>
             
             <div className="space-y-4">
@@ -436,7 +436,7 @@ export default function Landing() {
                 <Zap className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">DelegateNow</p>
+                <p className="text-sm font-semibold text-foreground">Deleg8te.ai</p>
                 <p className="text-xs text-muted-foreground">© 2024 WeighPay Group Inc.</p>
               </div>
             </div>
