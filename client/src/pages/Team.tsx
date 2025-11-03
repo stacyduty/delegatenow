@@ -1,60 +1,55 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import TeamMemberCard from "@/components/TeamMemberCard";
 import AddTeamMemberDialog from "@/components/AddTeamMemberDialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
+import type { TeamMember } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Team() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
 
-  // Mock data - todo: remove mock functionality
-  const [teamMembers] = useState([
-    {
-      id: "1",
-      name: "Sarah Chen",
-      role: "Marketing Director",
-      activeTasks: 3,
-      completionRate: 92,
+  const { data: teamMembers = [], isLoading } = useQuery<TeamMember[]>({
+    queryKey: ["/api/team-members"],
+  });
+
+  const addMemberMutation = useMutation({
+    mutationFn: async (member: { name: string; role: string; email: string }) => {
+      const res = await apiRequest("POST", "/api/team-members", member);
+      return await res.json();
     },
-    {
-      id: "2",
-      name: "Michael Torres",
-      role: "Finance Manager",
-      activeTasks: 5,
-      completionRate: 87,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      toast({
+        title: "Team member added",
+        description: "New team member has been added successfully.",
+      });
     },
-    {
-      id: "3",
-      name: "Emily Rodriguez",
-      role: "Operations Lead",
-      activeTasks: 2,
-      completionRate: 95,
+    onError: (error) => {
+      console.error("Error adding team member:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add team member. Please try again.",
+        variant: "destructive",
+      });
     },
-    {
-      id: "4",
-      name: "David Kim",
-      role: "Product Manager",
-      activeTasks: 4,
-      completionRate: 88,
-    },
-    {
-      id: "5",
-      name: "Jessica Wong",
-      role: "Sales Director",
-      activeTasks: 6,
-      completionRate: 91,
-    },
-    {
-      id: "6",
-      name: "Alex Johnson",
-      role: "HR Manager",
-      activeTasks: 3,
-      completionRate: 93,
-    },
-  ]);
+  });
+
+  const filteredMembers = useMemo(() => {
+    if (!searchQuery) return teamMembers;
+    const query = searchQuery.toLowerCase();
+    return teamMembers.filter(member => 
+      member.name.toLowerCase().includes(query) ||
+      member.role.toLowerCase().includes(query)
+    );
+  }, [teamMembers, searchQuery]);
 
   const handleAddMember = (member: { name: string; role: string; email: string }) => {
-    console.log("Adding new team member:", member);
+    addMemberMutation.mutate(member);
   };
 
   return (
@@ -80,15 +75,30 @@ export default function Team() {
         />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {teamMembers.map((member) => (
-          <TeamMemberCard
-            key={member.id}
-            {...member}
-            onClick={() => console.log(`Clicked member: ${member.name}`)}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-lg" data-testid={`skeleton-member-${i}`} />
+          ))}
+        </div>
+      ) : filteredMembers.length > 0 ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {filteredMembers.map((member) => (
+            <TeamMemberCard
+              key={member.id}
+              name={member.name}
+              role={member.role}
+              activeTasks={member.activeTasks || 0}
+              completionRate={member.completionRate || 0}
+              onClick={() => console.log(`Clicked member: ${member.name}`)}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="text-center text-muted-foreground py-8" data-testid="text-no-members">
+          {searchQuery ? "No team members found matching your search." : "No team members yet. Add your first team member!"}
+        </p>
+      )}
     </div>
   );
 }

@@ -1,70 +1,53 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import TaskCard from "@/components/TaskCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Filter } from "lucide-react";
+import type { Task, TeamMember } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
 
 export default function Tasks() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Mock data - todo: remove mock functionality
-  const tasks = [
-    {
-      id: "1",
-      title: "Develop Q1 Marketing Strategy",
-      impact: "high" as const,
-      urgency: "high" as const,
-      assignee: { name: "Sarah Chen", avatar: "" },
-      progress: 65,
-      dueDate: "in 2 days",
-      status: "in_progress" as const,
-    },
-    {
-      id: "2",
-      title: "Review Budget Allocations",
-      impact: "high" as const,
-      urgency: "medium" as const,
-      assignee: { name: "Michael Torres", avatar: "" },
-      progress: 30,
-      dueDate: "in 5 days",
-      status: "delegated" as const,
-    },
-    {
-      id: "3",
-      title: "Update Client Presentation Deck",
-      impact: "medium" as const,
-      urgency: "high" as const,
-      assignee: { name: "Emily Rodriguez", avatar: "" },
-      progress: 90,
-      dueDate: "tomorrow",
-      status: "review" as const,
-    },
-    {
-      id: "4",
-      title: "Prepare Quarterly Reports",
-      impact: "high" as const,
-      urgency: "medium" as const,
-      assignee: { name: "David Kim", avatar: "" },
-      progress: 45,
-      dueDate: "in 1 week",
-      status: "in_progress" as const,
-    },
-    {
-      id: "5",
-      title: "Team Training Session",
-      impact: "medium" as const,
-      urgency: "low" as const,
-      assignee: { name: "Sarah Chen", avatar: "" },
-      progress: 100,
-      dueDate: "completed",
-      status: "completed" as const,
-    },
-  ];
+  const { data: tasks = [], isLoading } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
+  });
+
+  const { data: teamMembers = [] } = useQuery<TeamMember[]>({
+    queryKey: ["/api/team-members"],
+  });
+
+  const formattedTasks = useMemo(() => {
+    return tasks.map(task => {
+      const teamMember = teamMembers.find(tm => tm.id === task.teamMemberId);
+      return {
+        id: task.id,
+        title: task.title,
+        impact: task.impact as "low" | "medium" | "high",
+        urgency: task.urgency as "low" | "medium" | "high",
+        assignee: teamMember ? { name: teamMember.name, avatar: teamMember.avatar || "" } : undefined,
+        progress: task.progress || 0,
+        dueDate: task.dueDate ? formatDistanceToNow(new Date(task.dueDate), { addSuffix: true }) : "No due date",
+        status: task.status as "delegated" | "in_progress" | "review" | "completed",
+      };
+    });
+  }, [tasks, teamMembers]);
+
+  const filteredTasks = useMemo(() => {
+    if (!searchQuery) return formattedTasks;
+    const query = searchQuery.toLowerCase();
+    return formattedTasks.filter(task => 
+      task.title.toLowerCase().includes(query) ||
+      task.assignee?.name.toLowerCase().includes(query)
+    );
+  }, [formattedTasks, searchQuery]);
 
   const filterByStatus = (status: string) => {
-    if (status === "all") return tasks;
-    return tasks.filter((task) => task.status === status);
+    if (status === "all") return filteredTasks;
+    return filteredTasks.filter((task) => task.status === status);
   };
 
   return (
@@ -101,63 +84,115 @@ export default function Tasks() {
         </TabsList>
 
         <TabsContent value="all" className="space-y-6 mt-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                {...task}
-                onClick={() => console.log(`Clicked task: ${task.title}`)}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-lg" data-testid={`skeleton-task-${i}`} />
+              ))}
+            </div>
+          ) : filteredTasks.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  {...task}
+                  onClick={() => console.log(`Clicked task: ${task.title}`)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8" data-testid="text-no-tasks">
+              {searchQuery ? "No tasks found matching your search." : "No tasks yet. Create tasks using voice delegation!"}
+            </p>
+          )}
         </TabsContent>
 
         <TabsContent value="delegated" className="space-y-6 mt-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filterByStatus("delegated").map((task) => (
-              <TaskCard
-                key={task.id}
-                {...task}
-                onClick={() => console.log(`Clicked task: ${task.title}`)}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-lg" />
+              ))}
+            </div>
+          ) : filterByStatus("delegated").length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filterByStatus("delegated").map((task) => (
+                <TaskCard
+                  key={task.id}
+                  {...task}
+                  onClick={() => console.log(`Clicked task: ${task.title}`)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">No delegated tasks.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="in_progress" className="space-y-6 mt-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filterByStatus("in_progress").map((task) => (
-              <TaskCard
-                key={task.id}
-                {...task}
-                onClick={() => console.log(`Clicked task: ${task.title}`)}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-lg" />
+              ))}
+            </div>
+          ) : filterByStatus("in_progress").length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filterByStatus("in_progress").map((task) => (
+                <TaskCard
+                  key={task.id}
+                  {...task}
+                  onClick={() => console.log(`Clicked task: ${task.title}`)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">No tasks in progress.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="review" className="space-y-6 mt-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filterByStatus("review").map((task) => (
-              <TaskCard
-                key={task.id}
-                {...task}
-                onClick={() => console.log(`Clicked task: ${task.title}`)}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-lg" />
+              ))}
+            </div>
+          ) : filterByStatus("review").length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filterByStatus("review").map((task) => (
+                <TaskCard
+                  key={task.id}
+                  {...task}
+                  onClick={() => console.log(`Clicked task: ${task.title}`)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">No tasks in review.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="completed" className="space-y-6 mt-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filterByStatus("completed").map((task) => (
-              <TaskCard
-                key={task.id}
-                {...task}
-                onClick={() => console.log(`Clicked task: ${task.title}`)}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-lg" />
+              ))}
+            </div>
+          ) : filterByStatus("completed").length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filterByStatus("completed").map((task) => (
+                <TaskCard
+                  key={task.id}
+                  {...task}
+                  onClick={() => console.log(`Clicked task: ${task.title}`)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">No completed tasks.</p>
+          )}
         </TabsContent>
       </Tabs>
     </div>
