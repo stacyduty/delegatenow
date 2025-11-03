@@ -1,4 +1,4 @@
-import { Home, ListTodo, Users, BarChart3, Mic, Settings, Crown } from "lucide-react";
+import { Home, ListTodo, Users, BarChart3, Mic, Settings, Crown, ScrollText } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +33,11 @@ const menuItems = [
     title: "Analytics",
     url: "/analytics",
     icon: BarChart3,
+  },
+  {
+    title: "Delegation History",
+    url: "/delegation-history",
+    icon: ScrollText,
   },
   {
     title: "Voice History",

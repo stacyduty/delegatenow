@@ -295,6 +295,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Accept task - formal acceptance with timestamp for audit trail
+  app.post("/api/tasks/:id/accept", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.id);
+      
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      // Authorization: Only task owner can accept
+      // NOTE: In current system design, team members are records without authentication.
+      // The executive (task owner) formally accepts the delegation on behalf of the organization.
+      // In a future implementation with team member authentication, delegates could accept directly.
+      if (task.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized to accept this task" });
+      }
+
+      // Check if already accepted
+      if (task.acceptedAt) {
+        return res.status(400).json({ error: "Task already accepted", acceptedAt: task.acceptedAt });
+      }
+
+      // Record formal acceptance with timestamp
+      const updatedTask = await storage.updateTask(req.params.id, {
+        acceptedAt: new Date(),
+      });
+
+      // Create notification for acceptance record
+      await storage.createNotification({
+        userId: userId,
+        taskId: task.id,
+        type: "task_assigned",
+        title: "Task Accepted",
+        message: `Task "${task.title}" has been formally accepted`,
+      });
+
+      res.json(updatedTask);
+    } catch (error) {
+      console.error("Error accepting task:", error);
+      res.status(500).json({ error: "Failed to accept task" });
+    }
+  });
+
   // ============ TEAM MEMBER ROUTES ============
 
   // Get all team members

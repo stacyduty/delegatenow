@@ -265,6 +265,150 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Comparison Section */}
+      <section className="container mx-auto max-w-7xl px-6 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold mb-4 text-foreground">How Delig8te Compares</h2>
+          <p className="text-lg text-muted-foreground">
+            Enterprise-grade compliance meets modern AI productivity
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8 mb-12">
+          {/* Traditional Delegation Tools */}
+          <Card className="p-8" data-testid="card-comparison-traditional">
+            <h3 className="text-2xl font-bold mb-2 text-muted-foreground">Traditional Tools</h3>
+            <p className="text-sm text-muted-foreground mb-6">Like iDelegate, Workday, others</p>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs text-red-600 dark:text-red-400">✗</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">7-180 days deployment</p>
+                  <p className="text-sm text-muted-foreground">Long setup cycles, complex configuration</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs text-red-600 dark:text-red-400">✗</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">$10k-15k+ setup fees</p>
+                  <p className="text-sm text-muted-foreground">One-time costs before monthly hosting</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs text-red-600 dark:text-red-400">✗</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Manual task entry</p>
+                  <p className="text-sm text-muted-foreground">Type every field, no AI assistance</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs text-red-600 dark:text-red-400">✗</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Built for compliance only</p>
+                  <p className="text-sm text-muted-foreground">Focuses on governance, not productivity</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs text-yellow-600 dark:text-yellow-400">~</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Good audit trails</p>
+                  <p className="text-sm text-muted-foreground">Strong compliance features</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Delig8te */}
+          <Card className="p-8 bg-primary/5 border-primary" data-testid="card-comparison-deligate">
+            <h3 className="text-2xl font-bold mb-2 text-primary">Delig8te</h3>
+            <p className="text-sm text-muted-foreground mb-6">AI-powered productivity + compliance</p>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Instant deployment</p>
+                  <p className="text-sm text-muted-foreground">Sign up and start delegating in minutes</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">$1/month total cost</p>
+                  <p className="text-sm text-muted-foreground">No setup fees, unlimited team members</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Voice-powered AI</p>
+                  <p className="text-sm text-muted-foreground">Speak naturally, AI creates SMART tasks</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Productivity + compliance</p>
+                  <p className="text-sm text-muted-foreground">Get work done AND meet audit requirements</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Audit trails included</p>
+                  <p className="text-sm text-muted-foreground">Formal acceptance, expiry tracking, spending limits</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid md:grid-cols-3 gap-6 text-center">
+          <div className="p-6 bg-muted rounded-lg">
+            <p className="text-4xl font-bold text-primary mb-2">1000x</p>
+            <p className="text-sm text-muted-foreground">More affordable than traditional tools</p>
+          </div>
+          <div className="p-6 bg-muted rounded-lg">
+            <p className="text-4xl font-bold text-primary mb-2">30 sec</p>
+            <p className="text-sm text-muted-foreground">Average time to delegate a task</p>
+          </div>
+          <div className="p-6 bg-muted rounded-lg">
+            <p className="text-4xl font-bold text-primary mb-2">0 days</p>
+            <p className="text-sm text-muted-foreground">Setup time required</p>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="container mx-auto max-w-7xl px-6 py-20">
         <Card className="p-12 text-center bg-primary text-primary-foreground" data-testid="card-cta">
