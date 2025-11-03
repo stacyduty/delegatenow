@@ -67,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create task with AI analysis from voice transcript
-  app.post("/api/tasks", isAuthenticated/analyze", isAuthenticated, async (req: any, res) => {
+  app.post("/api/tasks/analyze", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       // Validate request body
@@ -150,8 +150,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create task manually (without AI analysis)
-  app.post("/api/tasks", isAuthenticated", async (req: any, res) => {
+  app.post("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const validatedData = insertTaskSchema.parse({
         ...req.body,
         userId: userId,
@@ -180,8 +181,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update task
-  app.patch("/api/tasks", isAuthenticated/:id", async (req: any, res) => {
+  app.patch("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const task = await storage.getTask(req.params.id);
       if (!task || task.userId !== userId) {
         return res.status(404).json({ error: "Task not found" });
@@ -267,8 +269,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete task
-  app.delete("/api/tasks", isAuthenticated/:id", async (req: any, res) => {
+  app.delete("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const task = await storage.getTask(req.params.id);
       if (!task || task.userId !== userId) {
         return res.status(404).json({ error: "Task not found" });
@@ -295,8 +298,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ TEAM MEMBER ROUTES ============
 
   // Get all team members
-  app.get("/api/team-members", isAuthenticated", async (req: any, res) => {
+  app.get("/api/team-members", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const members = await storage.getTeamMembers(userId);
       res.json(members);
     } catch (error) {
@@ -306,8 +310,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single team member
-  app.get("/api/team-members", isAuthenticated/:id", async (req: any, res) => {
+  app.get("/api/team-members/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const member = await storage.getTeamMember(req.params.id);
       if (!member || member.userId !== userId) {
         return res.status(404).json({ error: "Team member not found" });
@@ -320,8 +325,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create team member
-  app.post("/api/team-members", isAuthenticated", async (req: any, res) => {
+  app.post("/api/team-members", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const validatedData = insertTeamMemberSchema.parse({
         ...req.body,
         userId: userId,
@@ -339,8 +345,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update team member
-  app.patch("/api/team-members", isAuthenticated/:id", async (req: any, res) => {
+  app.patch("/api/team-members/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const member = await storage.getTeamMember(req.params.id);
       if (!member || member.userId !== userId) {
         return res.status(404).json({ error: "Team member not found" });
@@ -362,8 +369,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete team member
-  app.delete("/api/team-members", isAuthenticated/:id", async (req: any, res) => {
+  app.delete("/api/team-members/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const member = await storage.getTeamMember(req.params.id);
       if (!member || member.userId !== userId) {
         return res.status(404).json({ error: "Team member not found" });
@@ -380,8 +388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ NOTIFICATION ROUTES ============
 
   // Get all notifications
-  app.get("/api/notifications", isAuthenticated", async (req: any, res) => {
+  app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const notifications = await storage.getNotifications(userId);
       res.json(notifications);
     } catch (error) {
@@ -391,7 +400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mark notification as read
-  app.patch("/api/notifications/:id/read", async (req: any, res) => {
+  app.patch("/api/notifications/:id/read", isAuthenticated, async (req: any, res) => {
     try {
       await storage.markNotificationRead(req.params.id);
       res.json({ success: true });
@@ -402,8 +411,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mark all notifications as read
-  app.patch("/api/notifications/read-all", async (req: any, res) => {
+  app.patch("/api/notifications/read-all", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       await storage.markAllNotificationsRead(userId);
       res.json({ success: true });
     } catch (error) {
@@ -415,8 +425,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ VOICE HISTORY ROUTES ============
 
   // Get voice history
-  app.get("/api/voice-history", isAuthenticated", async (req: any, res) => {
+  app.get("/api/voice-history", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const history = await storage.getVoiceHistory(userId);
       res.json(history);
     } catch (error) {
@@ -428,15 +439,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ USER/SUBSCRIPTION ROUTES ============
 
   // Get current user
-  app.get("/api/user", async (req: any, res) => {
+  app.get("/api/user", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      // Don't send password to client
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // User schema no longer has password field
+      res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ error: "Failed to fetch user" });
@@ -444,8 +455,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get dashboard stats
-  app.get("/api/dashboard", isAuthenticated/stats", async (req: any, res) => {
+  app.get("/api/dashboard/stats", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const tasks = await storage.getTasks(userId);
       const teamMembers = await storage.getTeamMembers(userId);
 
