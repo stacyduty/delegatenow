@@ -1,8 +1,8 @@
-# DelegateNow - AI Executive Task Delegation Platform
+# Deleg8te.ai - AI Executive Task Delegation Platform
 
 ## Overview
 
-DelegateNow is a voice-powered task delegation platform designed for executives to efficiently manage teams and tasks. The application enables users to speak their tasks, leveraging AI to analyze, prioritize, and delegate work automatically. Built with a modern tech stack, it features real-time task tracking, team management, and analytics with an emphasis on executive productivity and minimal friction.
+Deleg8te.ai is a voice-powered task delegation platform designed for executives to efficiently manage teams and tasks. The application enables users to speak their tasks, leveraging AI to analyze, prioritize, and delegate work automatically. Built with a modern tech stack, it features real-time task tracking, team management, and analytics with an emphasis on executive productivity and minimal friction.
 
 **Core Value Proposition:** Transform voice input into structured, delegated tasks with AI-powered analysis including impact assessment, urgency classification, and SMART objectives generation. Now includes enterprise-grade compliance features: formal task acceptance timestamps, expiry tracking, spending limits, and complete audit trails.
 

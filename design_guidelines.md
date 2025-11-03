@@ -1,4 +1,4 @@
-# DelegateNow - Design Guidelines
+# Deleg8te.ai - Design Guidelines
 
 ## Design Approach
 
