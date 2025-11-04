@@ -31,7 +31,10 @@ export function TemplateManager() {
       impact: string;
       urgency: string;
     }) => {
-      return apiRequest('POST', '/api/templates', data);
+      return apiRequest('POST', '/api/templates', {
+        ...data,
+        name: data.title, // Schema requires both name and title
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
