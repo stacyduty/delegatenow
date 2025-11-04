@@ -22,6 +22,18 @@ export interface TaskAnalysis {
   estimatedDuration?: string;
 }
 
+// Generic AI call function for reuse
+export async function callAI(messages: Array<{ role: string; content: string }>): Promise<string> {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: messages as any,
+    temperature: 0.7,
+    max_tokens: 2000,
+  });
+
+  return response.choices[0]?.message?.content || "";
+}
+
 export async function analyzeVoiceTask(transcript: string, teamMembers?: string[]): Promise<TaskAnalysis> {
   const teamMemberList = teamMembers && teamMembers.length > 0
     ? `Available team members: ${teamMembers.join(", ")}`

@@ -1,20 +1,4 @@
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  baseURL: "https://proxy.replitai.com/v1",
-  apiKey: process.env.REPL_ID ?? "fake-dummy-key-not-needed-when-running-in-replit",
-});
-
-async function callAI(messages: Array<{ role: string; content: string }>): Promise<string> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: messages as any,
-    temperature: 0.7,
-    max_tokens: 2000,
-  });
-
-  return response.choices[0]?.message?.content || "";
-}
+import { callAI } from "./openai";
 
 interface EmailTaskExtraction {
   shouldCreateTask: boolean;
