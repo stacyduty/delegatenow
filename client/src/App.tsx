@@ -20,6 +20,7 @@ import VoiceHistory from "@/pages/VoiceHistory";
 import Landing from "@/pages/Landing";
 import ProblemFlowDemo from "@/pages/ProblemFlowDemo";
 import TeamMemberLogin from "@/pages/TeamMemberLogin";
+import TeamDashboard from "@/pages/TeamDashboard";
 import AcceptInvitation from "@/pages/AcceptInvitation";
 import NotFound from "@/pages/not-found";
 import { useState, useEffect } from "react";
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/landing" component={Landing} />
       <Route path="/flow" component={ProblemFlowDemo} />
       <Route path="/team-login" component={TeamMemberLogin} />
+      <Route path="/team-dashboard" component={TeamDashboard} />
       <Route path="/accept-invitation" component={AcceptInvitation} />
       
       {/* Protected routes */}
@@ -180,8 +182,8 @@ function App() {
     "--sidebar-width-icon": "4rem",
   };
 
-  // Public pages don't need sidebar
-  const isPublicPage = location === "/landing" || location === "/flow" || location === "/team-login" || location === "/accept-invitation";
+  // Public pages don't need sidebar (team-dashboard is protected but doesn't use sidebar)
+  const isPublicPage = location === "/landing" || location === "/flow" || location === "/team-login" || location === "/team-dashboard" || location === "/accept-invitation";
 
   if (isPublicPage) {
     return (
