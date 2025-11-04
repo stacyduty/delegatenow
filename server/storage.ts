@@ -6,7 +6,8 @@ import {
   type Notification, type InsertNotification,
   type VoiceHistory, type InsertVoiceHistory,
   type CalendarEvent, type InsertCalendarEvent,
-  users, teamMembers, tasks, notifications, voiceHistory, calendarEvents
+  type EmailInbox, type InsertEmailInbox,
+  users, teamMembers, tasks, notifications, voiceHistory, calendarEvents, emailInbox
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -49,6 +50,12 @@ export interface IStorage {
   getCalendarEvent(id: string): Promise<CalendarEvent | undefined>;
   createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
   deleteCalendarEvent(id: string): Promise<void>;
+  
+  // Email inbox operations
+  getEmailInbox(userId: string): Promise<EmailInbox[]>;
+  getEmailByMessageId(messageId: string): Promise<EmailInbox | undefined>;
+  createEmail(email: InsertEmailInbox): Promise<EmailInbox>;
+  updateEmail(id: string, email: Partial<EmailInbox>): Promise<EmailInbox | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -191,6 +198,26 @@ export class DbStorage implements IStorage {
 
   async deleteCalendarEvent(id: string): Promise<void> {
     await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
+  }
+
+  // Email inbox operations
+  async getEmailInbox(userId: string): Promise<EmailInbox[]> {
+    return await db.select().from(emailInbox).where(eq(emailInbox.userId, userId)).orderBy(desc(emailInbox.receivedAt));
+  }
+
+  async getEmailByMessageId(messageId: string): Promise<EmailInbox | undefined> {
+    const result = await db.select().from(emailInbox).where(eq(emailInbox.messageId, messageId)).limit(1);
+    return result[0];
+  }
+
+  async createEmail(email: InsertEmailInbox): Promise<EmailInbox> {
+    const result = await db.insert(emailInbox).values(email).returning();
+    return result[0];
+  }
+
+  async updateEmail(id: string, email: Partial<EmailInbox>): Promise<EmailInbox | undefined> {
+    const result = await db.update(emailInbox).set(email).where(eq(emailInbox.id, id)).returning();
+    return result[0];
   }
 }
 

@@ -192,3 +192,37 @@ export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit
 
 export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
+
+// Email inbox - tracking emails that create tasks
+export const emailInbox = pgTable("email_inbox", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "set null" }),
+  
+  // Email metadata
+  messageId: text("message_id").unique(), // Email provider's message ID for deduplication
+  from: text("from").notNull(), // Sender email address
+  fromName: text("from_name"), // Sender display name
+  subject: text("subject").notNull(),
+  bodyText: text("body_text"), // Plain text body
+  bodyHtml: text("body_html"), // HTML body
+  receivedAt: timestamp("received_at").notNull(),
+  
+  // Processing status
+  status: text("status").default("pending"), // pending, processed, failed, ignored
+  processedAt: timestamp("processed_at"),
+  errorMessage: text("error_message"),
+  
+  // AI extraction results
+  extractedTask: jsonb("extracted_task"), // Structured task data from AI
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEmailInboxSchema = createInsertSchema(emailInbox).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEmailInbox = z.infer<typeof insertEmailInboxSchema>;
+export type EmailInbox = typeof emailInbox.$inferSelect;

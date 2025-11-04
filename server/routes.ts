@@ -9,6 +9,7 @@ import {
   insertNotificationSchema,
   insertVoiceHistorySchema,
   insertCalendarEventSchema,
+  insertEmailInboxSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -22,6 +23,7 @@ import {
   updateCalendarEvent,
   getFreeBusyInfo,
 } from "./integrations/googleCalendar";
+import { analyzeEmailForTask, htmlToPlainText } from "./emailParser";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
@@ -1008,6 +1010,287 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || "Failed to check availability" });
     }
   });
+
+  // ============ EMAIL ROUTES ============
+
+  // Get email inbox for user
+  app.get("/api/emails", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const emails = await storage.getEmailInbox(userId);
+      res.json(emails);
+    } catch (error) {
+      console.error("Error fetching emails:", error);
+      res.status(500).json({ error: "Failed to fetch emails" });
+    }
+  });
+
+  // Webhook endpoint for incoming emails (generic - works with any email service)
+  app.post("/api/emails/webhook", async (req, res) => {
+    try {
+      const requestSchema = z.object({
+        userId: z.string(), // Provided by email service or routing logic
+        messageId: z.string(),
+        from: z.string().email(),
+        fromName: z.string().optional(),
+        subject: z.string(),
+        bodyText: z.string().optional(),
+        bodyHtml: z.string().optional(),
+        receivedAt: z.string().optional(),
+      });
+
+      const emailData = requestSchema.parse(req.body);
+
+      // Check for duplicate email
+      const existingEmail = await storage.getEmailByMessageId(emailData.messageId);
+      if (existingEmail) {
+        return res.json({ 
+          message: "Email already processed", 
+          emailId: existingEmail.id,
+          taskId: existingEmail.taskId 
+        });
+      }
+
+      // Get body text (prefer plain text, fallback to converting HTML)
+      let bodyText = emailData.bodyText || '';
+      if (!bodyText && emailData.bodyHtml) {
+        bodyText = htmlToPlainText(emailData.bodyHtml);
+      }
+
+      // Store email in database
+      const email = await storage.createEmail({
+        userId: emailData.userId,
+        taskId: null,
+        messageId: emailData.messageId,
+        from: emailData.from,
+        fromName: emailData.fromName || null,
+        subject: emailData.subject,
+        bodyText,
+        bodyHtml: emailData.bodyHtml || null,
+        receivedAt: emailData.receivedAt ? new Date(emailData.receivedAt) : new Date(),
+        status: 'pending',
+        processedAt: null,
+        errorMessage: null,
+        extractedTask: null,
+      });
+
+      // Analyze email asynchronously (don't block response)
+      processEmailAsync(email.id, emailData.userId, emailData.from, emailData.subject, bodyText)
+        .catch(err => console.error("Error processing email:", err));
+
+      res.json({ 
+        message: "Email received and will be processed",
+        emailId: email.id 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromZodError(error).message });
+      }
+      console.error("Error processing email webhook:", error);
+      res.status(500).json({ error: "Failed to process email" });
+    }
+  });
+
+  // Manual email-to-task creation (for testing or manual forwarding)
+  app.post("/api/emails/create-task", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const requestSchema = z.object({
+        from: z.string().email(),
+        subject: z.string().min(1),
+        bodyText: z.string().min(1),
+      });
+
+      const { from, subject, bodyText } = requestSchema.parse(req.body);
+
+      // Get team members for AI suggestions
+      const teamMembers = await storage.getTeamMembers(userId);
+      const teamMemberNames = teamMembers.map(tm => tm.name);
+
+      // Analyze email with AI
+      const analysis = await analyzeEmailForTask(from, subject, bodyText, teamMemberNames);
+
+      if (!analysis.shouldCreateTask) {
+        return res.json({
+          shouldCreateTask: false,
+          reason: analysis.reason,
+        });
+      }
+
+      if (!analysis.taskData) {
+        return res.status(400).json({ error: "AI analysis failed to extract task data" });
+      }
+
+      // Find suggested team member
+      let suggestedTeamMember = null;
+      if (analysis.taskData.suggestedAssignee) {
+        suggestedTeamMember = teamMembers.find(
+          tm => tm.name.toLowerCase() === analysis.taskData!.suggestedAssignee?.toLowerCase()
+        );
+      }
+
+      // Create task from email
+      const task = await storage.createTask({
+        userId,
+        teamMemberId: suggestedTeamMember?.id || null,
+        title: analysis.taskData.title,
+        description: analysis.taskData.description,
+        voiceTranscript: `Email from: ${from}\nSubject: ${subject}`,
+        impact: analysis.taskData.impact,
+        urgency: analysis.taskData.urgency,
+        aiAnalysis: analysis.taskData.smartObjectives || null,
+        suggestedAssignee: analysis.taskData.suggestedAssignee || null,
+        status: 'delegated',
+        progress: 0,
+        dueDate: analysis.taskData.dueDate ? new Date(analysis.taskData.dueDate) : null,
+        acceptedAt: null,
+        expiryDate: null,
+        spendingLimit: null,
+      });
+
+      // Create email record
+      const email = await storage.createEmail({
+        userId,
+        taskId: task.id,
+        messageId: `manual-${Date.now()}`,
+        from,
+        fromName: null,
+        subject,
+        bodyText,
+        bodyHtml: null,
+        receivedAt: new Date(),
+        status: 'processed',
+        processedAt: new Date(),
+        errorMessage: null,
+        extractedTask: analysis.taskData as any,
+      });
+
+      // Update task counts
+      if (suggestedTeamMember) {
+        await storage.updateTeamMember(suggestedTeamMember.id, {
+          activeTasks: (suggestedTeamMember.activeTasks || 0) + 1,
+        });
+      }
+
+      // Create notification
+      await storage.createNotification({
+        userId,
+        taskId: task.id,
+        type: "task_assigned",
+        title: "Task Created from Email",
+        message: `New task "${task.title}" created from email: ${subject}`,
+      });
+
+      res.json({
+        shouldCreateTask: true,
+        task,
+        email,
+        analysis,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromZodError(error).message });
+      }
+      console.error("Error creating task from email:", error);
+      res.status(500).json({ error: "Failed to create task from email" });
+    }
+  });
+
+  // Async function to process email and create task
+  async function processEmailAsync(
+    emailId: string,
+    userId: string,
+    from: string,
+    subject: string,
+    bodyText: string
+  ) {
+    try {
+      // Get team members for AI suggestions
+      const teamMembers = await storage.getTeamMembers(userId);
+      const teamMemberNames = teamMembers.map(tm => tm.name);
+
+      // Analyze email with AI
+      const analysis = await analyzeEmailForTask(from, subject, bodyText, teamMemberNames);
+
+      if (!analysis.shouldCreateTask) {
+        await storage.updateEmail(emailId, {
+          status: 'ignored',
+          processedAt: new Date(),
+          extractedTask: { reason: analysis.reason } as any,
+        });
+        return;
+      }
+
+      if (!analysis.taskData) {
+        await storage.updateEmail(emailId, {
+          status: 'failed',
+          processedAt: new Date(),
+          errorMessage: 'AI analysis failed to extract task data',
+        });
+        return;
+      }
+
+      // Find suggested team member
+      let suggestedTeamMember = null;
+      if (analysis.taskData.suggestedAssignee) {
+        suggestedTeamMember = teamMembers.find(
+          tm => tm.name.toLowerCase() === analysis.taskData!.suggestedAssignee?.toLowerCase()
+        );
+      }
+
+      // Create task from email
+      const task = await storage.createTask({
+        userId,
+        teamMemberId: suggestedTeamMember?.id || null,
+        title: analysis.taskData.title,
+        description: analysis.taskData.description,
+        voiceTranscript: `Email from: ${from}\nSubject: ${subject}`,
+        impact: analysis.taskData.impact,
+        urgency: analysis.taskData.urgency,
+        aiAnalysis: analysis.taskData.smartObjectives || null,
+        suggestedAssignee: analysis.taskData.suggestedAssignee || null,
+        status: 'delegated',
+        progress: 0,
+        dueDate: analysis.taskData.dueDate ? new Date(analysis.taskData.dueDate) : null,
+        acceptedAt: null,
+        expiryDate: null,
+        spendingLimit: null,
+      });
+
+      // Update email with task linkage
+      await storage.updateEmail(emailId, {
+        taskId: task.id,
+        status: 'processed',
+        processedAt: new Date(),
+        extractedTask: analysis.taskData as any,
+      });
+
+      // Update task counts
+      if (suggestedTeamMember) {
+        await storage.updateTeamMember(suggestedTeamMember.id, {
+          activeTasks: (suggestedTeamMember.activeTasks || 0) + 1,
+        });
+      }
+
+      // Create notification
+      await storage.createNotification({
+        userId,
+        taskId: task.id,
+        type: "task_assigned",
+        title: "Task Created from Email",
+        message: `New task "${task.title}" created from email: ${subject}`,
+      });
+
+      console.log(`Successfully created task ${task.id} from email ${emailId}`);
+    } catch (error) {
+      console.error("Error in processEmailAsync:", error);
+      await storage.updateEmail(emailId, {
+        status: 'failed',
+        processedAt: new Date(),
+        errorMessage: (error as Error).message,
+      });
+    }
+  }
 
   const httpServer = createServer(app);
 

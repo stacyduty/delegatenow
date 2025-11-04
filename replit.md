@@ -110,12 +110,22 @@ Preferred communication style: Simple, everyday language.
 - Customer ID and subscription status tracked in user records
 - Webhook handling for subscription events (indicated by raw body parsing)
 
-**Google Calendar Integration:** **NEW**
+**Google Calendar Integration:**
 - Google Calendar API via Replit connector for OAuth management
 - Two-way sync: View calendar events and create events from tasks
 - Task deadline auto-sync with 1-hour pre-deadline calendar blocks
 - Team availability checking via free/busy API
 - Event tracking in database with task linkage
+
+**Email Integration:** **NEW (Phase 2, Month 2)**
+- AI-powered email parsing to extract task information
+- Automatic task creation from emails with delegation intelligence
+- Email inbox tracking with status management (pending/processed/ignored/failed)
+- Generic webhook endpoint compatible with any email service
+- Manual email-to-task API for testing and custom integrations
+- Deduplication via message ID tracking
+- SMART objectives extraction from email content
+- Note: AgentMail integration was declined - using manual/webhook approach instead
 
 **Third-party UI Libraries:**
 - Radix UI component primitives (20+ components)
