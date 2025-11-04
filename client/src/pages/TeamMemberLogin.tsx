@@ -4,14 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function TeamMemberLogin() {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => localStorage.getItem("team_member_email") || "");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem("team_member_email"));
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
@@ -55,6 +59,14 @@ export default function TeamMemberLogin() {
       });
       return;
     }
+    
+    // Save or clear email based on remember me
+    if (rememberMe) {
+      localStorage.setItem("team_member_email", email);
+    } else {
+      localStorage.removeItem("team_member_email");
+    }
+    
     loginMutation.mutate({ email, password });
   };
 
@@ -88,15 +100,41 @@ export default function TeamMemberLogin() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                data-testid="input-password"
-                required
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  data-testid="input-password"
+                  className="pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="button-toggle-password"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                data-testid="checkbox-remember"
               />
+              <Label
+                htmlFor="remember"
+                className="text-sm font-normal cursor-pointer select-none"
+              >
+                Remember my email
+              </Label>
             </div>
             <Button 
               type="submit" 

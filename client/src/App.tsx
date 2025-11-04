@@ -26,18 +26,26 @@ import { useState, useEffect } from "react";
 import { syncPendingMutations, setupOnlineListener } from "@/lib/offlineSync";
 import { initDB } from "@/lib/offlineStorage";
 
+import { useAuth } from "@/hooks/useAuth";
+
 // Protected route component
 function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType<any>, path?: string }) {
-  const { data: user, isLoading } = useQuery({
-    queryKey: ['/api/auth/user'],
-    retry: false,
-  });
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="h-16 w-16 rounded-lg bg-primary flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl font-bold text-primary-foreground">D8</span>
+          </div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return <Redirect to="/landing" />;
   }
 
