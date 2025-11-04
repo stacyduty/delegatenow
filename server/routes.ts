@@ -10,6 +10,15 @@ import {
   insertVoiceHistorySchema,
   insertCalendarEventSchema,
   insertEmailInboxSchema,
+  insertCommentSchema,
+  insertAttachmentSchema,
+  insertSubtaskSchema,
+  insertTagSchema,
+  insertTaskTagSchema,
+  insertActivityLogSchema,
+  insertTaskWatcherSchema,
+  insertTaskTemplateSchema,
+  insertRecurringTaskPatternSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -1291,6 +1300,513 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   }
+
+  // ============ TIER 1: COMMENT ROUTES ============
+  
+  app.get("/api/tasks/:taskId/comments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const comments = await storage.getComments(req.params.taskId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      res.status(500).json({ error: "Failed to fetch comments" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/comments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const validated = insertCommentSchema.parse({
+        ...req.body,
+        taskId: req.params.taskId,
+        userId,
+      });
+      const comment = await storage.createComment(validated);
+      
+      // Log activity
+      await storage.createActivityLog({
+        taskId: req.params.taskId,
+        userId,
+        action: "comment_added",
+        details: { commentId: comment.id, preview: comment.content.slice(0, 100) },
+      });
+      
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to create comment" });
+      }
+    }
+  });
+
+  app.delete("/api/comments/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const comment = await storage.getComment(req.params.id);
+      if (!comment) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+      // Verify ownership through task
+      const task = await storage.getTask(comment.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      await storage.deleteComment(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      res.status(500).json({ error: "Failed to delete comment" });
+    }
+  });
+
+  // ============ TIER 1: ATTACHMENT ROUTES ============
+  
+  app.get("/api/tasks/:taskId/attachments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const attachments = await storage.getAttachments(req.params.taskId);
+      res.json(attachments);
+    } catch (error) {
+      console.error("Error fetching attachments:", error);
+      res.status(500).json({ error: "Failed to fetch attachments" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/attachments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const validated = insertAttachmentSchema.parse({
+        ...req.body,
+        taskId: req.params.taskId,
+        userId,
+      });
+      const attachment = await storage.createAttachment(validated);
+      
+      // Log activity
+      await storage.createActivityLog({
+        taskId: req.params.taskId,
+        userId,
+        action: "attachment_added",
+        details: { attachmentId: attachment.id, fileName: attachment.fileName },
+      });
+      
+      res.status(201).json(attachment);
+    } catch (error) {
+      console.error("Error creating attachment:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to create attachment" });
+      }
+    }
+  });
+
+  app.delete("/api/attachments/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const attachment = await storage.getAttachment(req.params.id);
+      if (!attachment) {
+        return res.status(404).json({ error: "Attachment not found" });
+      }
+      // Verify ownership through task
+      const task = await storage.getTask(attachment.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      await storage.deleteAttachment(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting attachment:", error);
+      res.status(500).json({ error: "Failed to delete attachment" });
+    }
+  });
+
+  // ============ TIER 1: SUBTASK ROUTES ============
+  
+  app.get("/api/tasks/:taskId/subtasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const subtasks = await storage.getSubtasks(req.params.taskId);
+      res.json(subtasks);
+    } catch (error) {
+      console.error("Error fetching subtasks:", error);
+      res.status(500).json({ error: "Failed to fetch subtasks" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/subtasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const validated = insertSubtaskSchema.parse({
+        ...req.body,
+        taskId: req.params.taskId,
+      });
+      const subtask = await storage.createSubtask(validated);
+      
+      // Log activity
+      await storage.createActivityLog({
+        taskId: req.params.taskId,
+        userId,
+        action: "subtask_added",
+        details: { subtaskId: subtask.id, title: subtask.title },
+      });
+      
+      res.status(201).json(subtask);
+    } catch (error) {
+      console.error("Error creating subtask:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to create subtask" });
+      }
+    }
+  });
+
+  app.patch("/api/subtasks/:id/toggle", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subtask = await storage.getSubtask(req.params.id);
+      if (!subtask) {
+        return res.status(404).json({ error: "Subtask not found" });
+      }
+      // Verify ownership through task
+      const task = await storage.getTask(subtask.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      const updated = await storage.toggleSubtask(req.params.id);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error toggling subtask:", error);
+      res.status(500).json({ error: "Failed to toggle subtask" });
+    }
+  });
+
+  app.delete("/api/subtasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subtask = await storage.getSubtask(req.params.id);
+      if (!subtask) {
+        return res.status(404).json({ error: "Subtask not found" });
+      }
+      // Verify ownership through task
+      const task = await storage.getTask(subtask.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      await storage.deleteSubtask(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting subtask:", error);
+      res.status(500).json({ error: "Failed to delete subtask" });
+    }
+  });
+
+  // ============ TIER 2: TAG ROUTES ============
+  
+  app.get("/api/tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const tags = await storage.getTags(userId);
+      res.json(tags);
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+      res.status(500).json({ error: "Failed to fetch tags" });
+    }
+  });
+
+  app.post("/api/tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertTagSchema.parse({
+        ...req.body,
+        userId,
+      });
+      const tag = await storage.createTag(validated);
+      res.status(201).json(tag);
+    } catch (error) {
+      console.error("Error creating tag:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to create tag" });
+      }
+    }
+  });
+
+  app.get("/api/tasks/:taskId/tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const tags = await storage.getTaskTags(req.params.taskId);
+      res.json(tags);
+    } catch (error) {
+      console.error("Error fetching task tags:", error);
+      res.status(500).json({ error: "Failed to fetch task tags" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/tags/:tagId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      await storage.addTaskTag({
+        taskId: req.params.taskId,
+        tagId: req.params.tagId,
+      });
+      res.status(201).send();
+    } catch (error) {
+      console.error("Error adding task tag:", error);
+      res.status(400).json({ error: "Failed to add task tag" });
+    }
+  });
+
+  app.delete("/api/tasks/:taskId/tags/:tagId", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.removeTaskTag(req.params.taskId, req.params.tagId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing task tag:", error);
+      res.status(500).json({ error: "Failed to remove task tag" });
+    }
+  });
+
+  // ============ TIER 2: ACTIVITY LOG ROUTES ============
+  
+  app.get("/api/tasks/:taskId/activity", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const activity = await storage.getActivityLog(req.params.taskId);
+      res.json(activity);
+    } catch (error) {
+      console.error("Error fetching activity log:", error);
+      res.status(500).json({ error: "Failed to fetch activity log" });
+    }
+  });
+
+  // ============ TIER 2: TASK WATCHER ROUTES ============
+  
+  app.get("/api/tasks/:taskId/watchers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const watchers = await storage.getTaskWatchers(req.params.taskId);
+      res.json(watchers);
+    } catch (error) {
+      console.error("Error fetching watchers:", error);
+      res.status(500).json({ error: "Failed to fetch watchers" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/watchers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.addTaskWatcher({
+        taskId: req.params.taskId,
+        userId,
+        teamMemberId: req.body.teamMemberId || null,
+      });
+      res.status(201).send();
+    } catch (error) {
+      console.error("Error adding watcher:", error);
+      res.status(400).json({ error: "Failed to add watcher" });
+    }
+  });
+
+  app.delete("/api/tasks/:taskId/watchers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.removeTaskWatcher(req.params.taskId, userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing watcher:", error);
+      res.status(500).json({ error: "Failed to remove watcher" });
+    }
+  });
+
+  // ============ TIER 3: TASK TEMPLATE ROUTES ============
+  
+  app.get("/api/templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const templates = await storage.getTaskTemplates(userId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      res.status(500).json({ error: "Failed to fetch templates" });
+    }
+  });
+
+  app.post("/api/templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertTaskTemplateSchema.parse({
+        ...req.body,
+        userId,
+      });
+      const template = await storage.createTaskTemplate(validated);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating template:", error);
+      res.status(400).json({ error: fromZodError(error as any).message });
+    }
+  });
+
+  app.post("/api/templates/:id/create-task", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const template = await storage.getTaskTemplate(req.params.id);
+      if (!template || template.userId !== userId) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      
+      // Create task from template
+      const task = await storage.createTask({
+        userId,
+        teamMemberId: req.body.teamMemberId || null,
+        title: template.title,
+        description: template.description || "",
+        impact: template.impact,
+        urgency: template.urgency,
+        status: "delegated",
+        progress: 0,
+      });
+      
+      // Create subtasks from template
+      if (template.subtaskTemplates) {
+        const subtaskTitles = template.subtaskTemplates as string[];
+        for (let i = 0; i < subtaskTitles.length; i++) {
+          await storage.createSubtask({
+            taskId: task.id,
+            title: subtaskTitles[i],
+            order: i,
+            completed: false,
+          });
+        }
+      }
+      
+      res.status(201).json(task);
+    } catch (error) {
+      console.error("Error creating task from template:", error);
+      res.status(500).json({ error: "Failed to create task from template" });
+    }
+  });
+
+  app.delete("/api/templates/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const template = await storage.getTaskTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      // Verify ownership
+      if (template.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      await storage.deleteTaskTemplate(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      res.status(500).json({ error: "Failed to delete template" });
+    }
+  });
+
+  // ============ TIER 3: RECURRING TASK ROUTES ============
+  
+  app.get("/api/recurring-tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const patterns = await storage.getRecurringTaskPatterns(userId);
+      res.json(patterns);
+    } catch (error) {
+      console.error("Error fetching recurring tasks:", error);
+      res.status(500).json({ error: "Failed to fetch recurring tasks" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/recurring", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const validated = insertRecurringTaskPatternSchema.parse({
+        ...req.body,
+        taskId: req.params.taskId,
+      });
+      const pattern = await storage.createRecurringTaskPattern(validated);
+      res.status(201).json(pattern);
+    } catch (error) {
+      console.error("Error creating recurring pattern:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to create recurring pattern" });
+      }
+    }
+  });
+
+  app.delete("/api/recurring-tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const pattern = await storage.getRecurringTaskPattern(req.params.id);
+      if (!pattern) {
+        return res.status(404).json({ error: "Recurring pattern not found" });
+      }
+      // Verify ownership through task
+      const task = await storage.getTask(pattern.taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      await storage.deleteRecurringTaskPattern(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting recurring pattern:", error);
+      res.status(500).json({ error: "Failed to delete recurring pattern" });
+    }
+  });
 
   const httpServer = createServer(app);
 

@@ -1,6 +1,9 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import TaskCard from "@/components/TaskCard";
+import { TaskDetailModal } from "@/components/TaskDetailModal";
+import { TagManager } from "@/components/TagManager";
+import { TemplateManager } from "@/components/TemplateManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +14,8 @@ import { formatDistanceToNow } from "date-fns";
 
 export default function Tasks() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -68,10 +73,14 @@ export default function Tasks() {
             data-testid="input-search-tasks"
           />
         </div>
-        <Button variant="outline" data-testid="button-filter-tasks">
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-        </Button>
+        <div className="flex gap-2">
+          <TagManager />
+          <TemplateManager />
+          <Button variant="outline" data-testid="button-filter-tasks">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="all">
@@ -96,7 +105,11 @@ export default function Tasks() {
                 <TaskCard
                   key={task.id}
                   {...task}
-                  onClick={() => console.log(`Clicked task: ${task.title}`)}
+                  onClick={() => {
+                  const fullTask = tasks.find(t => t.id === task.id);
+                  setSelectedTask(fullTask || null);
+                  setIsDetailModalOpen(true);
+                }}
                 />
               ))}
             </div>
@@ -120,7 +133,11 @@ export default function Tasks() {
                 <TaskCard
                   key={task.id}
                   {...task}
-                  onClick={() => console.log(`Clicked task: ${task.title}`)}
+                  onClick={() => {
+                  const fullTask = tasks.find(t => t.id === task.id);
+                  setSelectedTask(fullTask || null);
+                  setIsDetailModalOpen(true);
+                }}
                 />
               ))}
             </div>
@@ -142,7 +159,11 @@ export default function Tasks() {
                 <TaskCard
                   key={task.id}
                   {...task}
-                  onClick={() => console.log(`Clicked task: ${task.title}`)}
+                  onClick={() => {
+                  const fullTask = tasks.find(t => t.id === task.id);
+                  setSelectedTask(fullTask || null);
+                  setIsDetailModalOpen(true);
+                }}
                 />
               ))}
             </div>
@@ -164,7 +185,11 @@ export default function Tasks() {
                 <TaskCard
                   key={task.id}
                   {...task}
-                  onClick={() => console.log(`Clicked task: ${task.title}`)}
+                  onClick={() => {
+                  const fullTask = tasks.find(t => t.id === task.id);
+                  setSelectedTask(fullTask || null);
+                  setIsDetailModalOpen(true);
+                }}
                 />
               ))}
             </div>
@@ -186,7 +211,11 @@ export default function Tasks() {
                 <TaskCard
                   key={task.id}
                   {...task}
-                  onClick={() => console.log(`Clicked task: ${task.title}`)}
+                  onClick={() => {
+                  const fullTask = tasks.find(t => t.id === task.id);
+                  setSelectedTask(fullTask || null);
+                  setIsDetailModalOpen(true);
+                }}
                 />
               ))}
             </div>
@@ -195,6 +224,13 @@ export default function Tasks() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTask}
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
+      />
     </div>
   );
 }

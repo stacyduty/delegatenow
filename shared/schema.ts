@@ -226,3 +226,177 @@ export const insertEmailInboxSchema = createInsertSchema(emailInbox).omit({
 
 export type InsertEmailInbox = z.infer<typeof insertEmailInboxSchema>;
 export type EmailInbox = typeof emailInbox.$inferSelect;
+
+// TIER 1: Comments - discussion threads on tasks
+export const comments = pgTable("comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  teamMemberId: varchar("team_member_id").references(() => teamMembers.id, { onDelete: "set null" }),
+  content: text("content").notNull(),
+  mentions: text("mentions").array(), // Array of mentioned user/team member IDs
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCommentSchema = createInsertSchema(comments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type Comment = typeof comments.$inferSelect;
+
+// TIER 1: Attachments - file uploads on tasks
+export const attachments = pgTable("attachments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  teamMemberId: varchar("team_member_id").references(() => teamMembers.id, { onDelete: "set null" }),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(), // bytes
+  fileType: text("file_type").notNull(), // MIME type
+  objectPath: text("object_path").notNull(), // Path in object storage
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAttachmentSchema = createInsertSchema(attachments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAttachment = z.infer<typeof insertAttachmentSchema>;
+export type Attachment = typeof attachments.$inferSelect;
+
+// TIER 1: Subtasks - checklist items for breaking down tasks
+export const subtasks = pgTable("subtasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  completed: boolean("completed").default(false),
+  order: integer("order").notNull().default(0), // For manual ordering
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertSubtaskSchema = createInsertSchema(subtasks).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export type InsertSubtask = z.infer<typeof insertSubtaskSchema>;
+export type Subtask = typeof subtasks.$inferSelect;
+
+// TIER 2: Tags - custom labels for task categorization
+export const tags = pgTable("tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  color: text("color").default("#3b82f6"), // Hex color code
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTagSchema = createInsertSchema(tags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTag = z.infer<typeof insertTagSchema>;
+export type Tag = typeof tags.$inferSelect;
+
+// TIER 2: Task-Tags junction table (many-to-many)
+export const taskTags = pgTable("task_tags", {
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  tagId: varchar("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTaskTagSchema = createInsertSchema(taskTags).omit({
+  createdAt: true,
+});
+
+export type InsertTaskTag = z.infer<typeof insertTaskTagSchema>;
+export type TaskTag = typeof taskTags.$inferSelect;
+
+// TIER 2: Activity Log - per-task change history
+export const activityLog = pgTable("activity_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  teamMemberId: varchar("team_member_id").references(() => teamMembers.id, { onDelete: "set null" }),
+  action: text("action").notNull(), // status_changed, assigned, reassigned, comment_added, attachment_added, etc.
+  details: jsonb("details"), // Structured data about the change
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertActivityLogSchema = createInsertSchema(activityLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+export type ActivityLog = typeof activityLog.$inferSelect;
+
+// TIER 2: Task Watchers - follow tasks without being assigned
+export const taskWatchers = pgTable("task_watchers", {
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  teamMemberId: varchar("team_member_id").references(() => teamMembers.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTaskWatcherSchema = createInsertSchema(taskWatchers).omit({
+  createdAt: true,
+});
+
+export type InsertTaskWatcher = z.infer<typeof insertTaskWatcherSchema>;
+export type TaskWatcher = typeof taskWatchers.$inferSelect;
+
+// TIER 3: Task Templates - reusable task structures
+export const taskTemplates = pgTable("task_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  impact: text("impact").notNull().default("medium"),
+  urgency: text("urgency").notNull().default("medium"),
+  subtaskTemplates: jsonb("subtask_templates"), // Array of subtask titles
+  tagIds: text("tag_ids").array(), // Array of tag IDs
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTaskTemplateSchema = createInsertSchema(taskTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTaskTemplate = z.infer<typeof insertTaskTemplateSchema>;
+export type TaskTemplate = typeof taskTemplates.$inferSelect;
+
+// TIER 3: Recurring Tasks - add recurrence fields to tasks
+// Note: Using existing tasks table, adding recurrence support via new fields
+export const recurringTaskPatterns = pgTable("recurring_task_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }).unique(),
+  frequency: text("frequency").notNull(), // daily, weekly, monthly, yearly
+  interval: integer("interval").default(1), // Every X days/weeks/months
+  daysOfWeek: text("days_of_week").array(), // For weekly: ['monday', 'friday']
+  dayOfMonth: integer("day_of_month"), // For monthly: 15 (15th of month)
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"), // null = never ends
+  lastGenerated: timestamp("last_generated"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRecurringTaskPatternSchema = createInsertSchema(recurringTaskPatterns).omit({
+  id: true,
+  lastGenerated: true,
+  createdAt: true,
+});
+
+export type InsertRecurringTaskPattern = z.infer<typeof insertRecurringTaskPatternSchema>;
+export type RecurringTaskPattern = typeof recurringTaskPatterns.$inferSelect;
