@@ -1,4 +1,4 @@
-import { Home, ListTodo, Users, BarChart3, Mic, Settings, Crown, ScrollText, Calendar } from "lucide-react";
+import { Home, ListTodo, Users, BarChart3, Mic, Settings, Crown, ScrollText, Calendar, Mail } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -43,6 +43,11 @@ const menuItems = [
     title: "Calendar",
     url: "/calendar",
     icon: Calendar,
+  },
+  {
+    title: "Email Tasks",
+    url: "/email-tasks",
+    icon: Mail,
   },
   {
     title: "Voice History",

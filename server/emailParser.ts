@@ -89,8 +89,36 @@ Should this email be converted into a task? If yes, extract all task details.`;
       { role: "user", content: userPrompt }
     ]);
 
+    // Clean up AI response - remove markdown code fences and extra whitespace
+    let cleanedResponse = response.trim();
+    
+    // Remove markdown JSON code fences if present
+    if (cleanedResponse.startsWith('```json')) {
+      cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedResponse.startsWith('```')) {
+      cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    cleanedResponse = cleanedResponse.trim();
+
     // Parse AI response
-    const result = JSON.parse(response) as EmailTaskExtraction;
+    let result: EmailTaskExtraction;
+    try {
+      result = JSON.parse(cleanedResponse) as EmailTaskExtraction;
+    } catch (parseError) {
+      console.error("Failed to parse AI response:", cleanedResponse);
+      throw new Error("Invalid JSON response from AI");
+    }
+
+    // Validate the structure
+    if (typeof result.shouldCreateTask !== 'boolean') {
+      throw new Error("AI response missing shouldCreateTask field");
+    }
+
+    if (result.shouldCreateTask && !result.taskData) {
+      throw new Error("AI indicated task should be created but provided no task data");
+    }
+
     return result;
   } catch (error) {
     console.error("Error analyzing email for task:", error);
