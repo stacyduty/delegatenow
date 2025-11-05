@@ -162,3 +162,53 @@ export async function getFreeBusyInfo(
 
   return response.data.calendars;
 }
+
+export async function createMeetingWithLink(params: {
+  summary: string;
+  description?: string;
+  startTime: Date;
+  endTime: Date;
+  attendees?: string[];
+}) {
+  const calendar = await getUncachableGoogleCalendarClient();
+
+  const event = {
+    summary: params.summary,
+    description: params.description,
+    start: {
+      dateTime: params.startTime.toISOString(),
+      timeZone: 'UTC',
+    },
+    end: {
+      dateTime: params.endTime.toISOString(),
+      timeZone: 'UTC',
+    },
+    attendees: params.attendees?.map(email => ({ email })),
+    conferenceData: {
+      createRequest: {
+        requestId: `meet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        conferenceSolutionKey: { type: 'hangoutsMeet' },
+      },
+    },
+    reminders: {
+      useDefault: true,
+    },
+  };
+
+  const response = await calendar.events.insert({
+    calendarId: 'primary',
+    requestBody: event,
+    conferenceDataVersion: 1, // Required to generate Meet link
+  });
+
+  // Extract Meet link
+  const meetLink = response.data.conferenceData?.entryPoints?.find(
+    (ep: any) => ep.entryPointType === 'video'
+  )?.uri;
+
+  return {
+    event: response.data,
+    meetLink,
+    meetingCode: meetLink?.split('/').pop(),
+  };
+}

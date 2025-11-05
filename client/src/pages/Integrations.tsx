@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Link2, Link2Off, ExternalLink, CheckCircle2, Zap, MessageSquare } from "lucide-react";
-import { SiSlack, SiGmail } from "react-icons/si";
+import { Link2, Link2Off, ExternalLink, CheckCircle2, Zap, MessageSquare, Video } from "lucide-react";
+import { SiSlack, SiGmail, SiGooglemeet } from "react-icons/si";
 
 interface Integration {
   id: string;
@@ -36,6 +36,12 @@ interface GmailStatus {
   lastSync?: string;
 }
 
+interface GoogleMeetStatus {
+  connected: boolean;
+  status?: string;
+  message?: string;
+}
+
 export default function Integrations() {
   const { toast } = useToast();
   const [connectingSlack, setConnectingSlack] = useState(false);
@@ -47,6 +53,10 @@ export default function Integrations() {
 
   const { data: gmailStatus, isFetching: gmailFetching } = useQuery<GmailStatus>({
     queryKey: ["/api/integrations/gmail"],
+  });
+
+  const { data: googleMeetStatus, isFetching: googleMeetFetching } = useQuery<GoogleMeetStatus>({
+    queryKey: ["/api/integrations/google-meet"],
   });
 
   const testSlackMutation = useMutation({
@@ -184,6 +194,26 @@ export default function Integrations() {
     }
   };
 
+  // Google Meet mutations
+  const testGoogleMeetMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/integrations/google-meet/test", "POST", {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Test meeting created",
+        description: data.meetLink ? `Meeting link: ${data.meetLink}` : "Meeting created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to create test meeting",
+        description: error.message,
+      });
+    },
+  });
+
   const integrations: Integration[] = [
     {
       id: "slack",
@@ -216,6 +246,21 @@ export default function Integrations() {
         "Send task updates via email",
         "AI-powered email parsing",
         "Smart task extraction from email content",
+      ],
+      tier: "free",
+    },
+    {
+      id: "google-meet",
+      name: "Google Meet",
+      description: "Instantly create video meeting links for task discussions. Automatically generate Google Meet links and add them to your calendar events for seamless team collaboration.",
+      icon: SiGooglemeet,
+      color: "bg-[#00897B]",
+      connected: googleMeetStatus?.connected || false,
+      capabilities: [
+        "Auto-generate Meet links for tasks",
+        "Calendar integration for meetings",
+        "One-click meeting creation",
+        "Share meeting links with team",
       ],
       tier: "free",
     },
@@ -358,23 +403,38 @@ export default function Integrations() {
                         </Button>
                       </>
                     )}
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => {
-                        if (integration.id === "slack") {
-                          disconnectSlackMutation.mutate();
-                        } else if (integration.id === "gmail") {
-                          disconnectGmailMutation.mutate();
-                        }
-                      }}
-                      disabled={disconnectSlackMutation.isPending || disconnectGmailMutation.isPending}
-                      className="flex-1"
-                      data-testid={`button-disconnect-${integration.id}`}
-                    >
-                      <Link2Off className="h-4 w-4 mr-2" />
-                      {disconnectSlackMutation.isPending ? "Disconnecting..." : "Disconnect"}
-                    </Button>
+                    {integration.id === "google-meet" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => testGoogleMeetMutation.mutate()}
+                        disabled={testGoogleMeetMutation.isPending}
+                        className="flex-1"
+                        data-testid="button-test-google-meet"
+                      >
+                        <Video className="h-4 w-4 mr-2" />
+                        {testGoogleMeetMutation.isPending ? "Creating..." : "Test"}
+                      </Button>
+                    )}
+                    {integration.id !== "google-meet" && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          if (integration.id === "slack") {
+                            disconnectSlackMutation.mutate();
+                          } else if (integration.id === "gmail") {
+                            disconnectGmailMutation.mutate();
+                          }
+                        }}
+                        disabled={disconnectSlackMutation.isPending || disconnectGmailMutation.isPending}
+                        className="flex-1"
+                        data-testid={`button-disconnect-${integration.id}`}
+                      >
+                        <Link2Off className="h-4 w-4 mr-2" />
+                        {disconnectSlackMutation.isPending ? "Disconnecting..." : "Disconnect"}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -435,6 +495,11 @@ export default function Integrations() {
                         handleConnectSlack();
                       } else if (integration.id === "gmail") {
                         handleConnectGmail();
+                      } else if (integration.id === "google-meet") {
+                        toast({
+                          title: "Connect Google Calendar",
+                          description: "Google Meet uses Google Calendar integration. Please connect Google Calendar from the Tools pane to enable Google Meet.",
+                        });
                       }
                     }}
                     disabled={(connectingSlack && integration.id === "slack") || (connectingGmail && integration.id === "gmail")}
@@ -464,18 +529,18 @@ export default function Integrations() {
         <CardContent>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              "Google Calendar (✅ Available)",
-              "Email Parser (✅ Available)",
+              "Google Drive",
               "Asana",
               "Trello",
               "Microsoft Teams",
-              "Google Meet",
+              "Discord",
+              "Telegram Bot",
               "Zoom",
               "GitHub",
               "Jira",
               "Linear",
               "Notion",
-              "Airtable",
+              "Todoist",
             ].map((tool, idx) => (
               <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="text-primary">•</span>

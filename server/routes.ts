@@ -2488,6 +2488,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ INTEGRATION ROUTES: GOOGLE MEET ============
+  // Google Meet uses Google Calendar OAuth - shares authentication
+
+  // Get Google Meet status (checks if Calendar is connected)
+  app.get('/api/integrations/google-meet', isAuthenticated, async (req: any, res) => {
+    try {
+      // Google Meet uses Google Calendar connector
+      const { getUncachableGoogleCalendarClient } = await import('./integrations/googleCalendar');
+      
+      try {
+        // Try to get calendar client - if this succeeds, Google Calendar (and Meet) is connected
+        await getUncachableGoogleCalendarClient();
+        res.json({
+          connected: true,
+          status: 'active',
+          message: 'Google Meet is available via Google Calendar integration'
+        });
+      } catch (error) {
+        res.json({ connected: false });
+      }
+    } catch (error) {
+      console.error("Error checking Google Meet status:", error);
+      res.status(500).json({ error: "Failed to check Google Meet status" });
+    }
+  });
+
+  // Create test meeting with Google Meet link
+  app.post('/api/integrations/google-meet/test', isAuthenticated, async (req: any, res) => {
+    try {
+      const { createMeetingWithLink } = await import('./integrations/googleCalendar');
+      
+      // Create a test meeting 1 hour from now, lasting 30 minutes
+      const startTime = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+      const endTime = new Date(startTime.getTime() + 30 * 60 * 1000); // 30 minutes duration
+      
+      const result = await createMeetingWithLink({
+        summary: 'Test Meeting from Deleg8te.ai',
+        description: 'This is a test meeting to verify Google Meet integration is working correctly.',
+        startTime,
+        endTime,
+      });
+
+      res.json({
+        success: true,
+        message: "Test meeting created successfully",
+        meetLink: result.meetLink,
+        meetingCode: result.meetingCode,
+        eventId: result.event.id,
+      });
+    } catch (error: any) {
+      console.error("Error creating test meeting:", error);
+      res.status(500).json({ error: error.message || "Failed to create test meeting" });
+    }
+  });
+
+  // Create meeting for a task
+  app.post('/api/integrations/google-meet/create', isAuthenticated, async (req: any, res) => {
+    try {
+      // Validate request body
+      const createMeetingSchema = z.object({
+        taskId: z.string().min(1),
+        startTime: z.string().datetime().or(z.number()),
+        duration: z.number().positive().optional(),
+        attendees: z.array(z.string().email()).optional(),
+      });
+
+      const parsed = createMeetingSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid request data",
+          details: parsed.error.flatten().fieldErrors 
+        });
+      }
+
+      const { taskId, startTime, duration, attendees } = parsed.data;
+
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(taskId);
+      
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      const { createMeetingWithLink } = await import('./integrations/googleCalendar');
+      
+      const start = new Date(startTime);
+      const durationMinutes = duration || 30; // Default 30 minutes
+      const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+      
+      const result = await createMeetingWithLink({
+        summary: `Meeting: ${task.title}`,
+        description: task.description || 'Task discussion meeting via Deleg8te.ai',
+        startTime: start,
+        endTime: end,
+        attendees: attendees || [],
+      });
+
+      res.json({
+        success: true,
+        message: "Meeting created successfully",
+        meetLink: result.meetLink,
+        meetingCode: result.meetingCode,
+        eventId: result.event.id,
+      });
+    } catch (error: any) {
+      console.error("Error creating task meeting:", error);
+      res.status(500).json({ error: error.message || "Failed to create meeting" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
