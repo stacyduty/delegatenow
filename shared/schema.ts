@@ -22,8 +22,9 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   stripeCustomerId: text("stripe_customer_id"),
-  subscriptionStatus: text("subscription_status").default("inactive"), // inactive, active, cancelled
+  subscriptionStatus: text("subscription_status").default("inactive"), // inactive, active, cancelled, trialing
   subscriptionId: text("subscription_id"),
+  subscriptionTier: text("subscription_tier").default("executive"), // executive ($1/mo), pro ($3/mo), enterprise ($9/mo)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -33,6 +34,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   stripeCustomerId: true,
   subscriptionStatus: true,
   subscriptionId: true,
+  subscriptionTier: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -400,3 +402,104 @@ export const insertRecurringTaskPatternSchema = createInsertSchema(recurringTask
 
 export type InsertRecurringTaskPattern = z.infer<typeof insertRecurringTaskPatternSchema>;
 export type RecurringTaskPattern = typeof recurringTaskPatterns.$inferSelect;
+
+// ============ INTEGRATION ECOSYSTEM & PRO TIER TABLES ============
+
+// User Integrations - OAuth connections to third-party services
+export const integrations = pgTable("integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  integrationId: varchar("integration_id").notNull(), // 'slack', 'gmail', 'trello', etc.
+  credentials: text("credentials"), // Encrypted OAuth tokens/API keys (JSON string)
+  settings: jsonb("settings"), // Integration-specific configuration
+  status: varchar("status").notNull().default("active"), // active, error, disabled
+  lastSyncAt: timestamp("last_sync_at"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertIntegrationSchema = createInsertSchema(integrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
+export type Integration = typeof integrations.$inferSelect;
+
+// Custom Webhooks - PRO feature for user-configured webhook endpoints
+export const webhooks = pgTable("webhooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(), // User-friendly name
+  url: varchar("url").notNull(), // Webhook endpoint
+  events: text("events").array().notNull(), // ['task.created', 'task.updated', etc.]
+  secret: varchar("secret").notNull(), // For HMAC signing
+  enabled: boolean("enabled").notNull().default(true),
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  failureCount: integer("failure_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertWebhookSchema = createInsertSchema(webhooks).omit({
+  id: true,
+  secret: true, // Generated server-side
+  lastTriggeredAt: true,
+  failureCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+export type Webhook = typeof webhooks.$inferSelect;
+
+// API Keys - PRO feature for public API access
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  key: varchar("key").notNull().unique(), // sk_live_... or sk_test_...
+  name: varchar("name").notNull(), // User-defined name
+  environment: varchar("environment").notNull().default("production"), // production, development
+  lastUsedAt: timestamp("last_used_at"),
+  requestCount: integer("request_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  key: true, // Generated server-side
+  lastUsedAt: true,
+  requestCount: true,
+  createdAt: true,
+});
+
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
+
+// Automation Rules - PRO feature for if/then task automation
+export const automationRules = pgTable("automation_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  trigger: jsonb("trigger").notNull(), // { event: 'task.created', conditions: [...] }
+  actions: jsonb("actions").notNull(), // [{ type: 'slack_notify', config: {...} }, ...]
+  enabled: boolean("enabled").notNull().default(true),
+  executionCount: integer("execution_count").notNull().default(0),
+  lastExecutedAt: timestamp("last_executed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAutomationRuleSchema = createInsertSchema(automationRules).omit({
+  id: true,
+  executionCount: true,
+  lastExecutedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAutomationRule = z.infer<typeof insertAutomationRuleSchema>;
+export type AutomationRule = typeof automationRules.$inferSelect;
