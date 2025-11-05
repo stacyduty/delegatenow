@@ -4,6 +4,7 @@ import DashboardStats from "@/components/DashboardStats";
 import VoiceButton from "@/components/VoiceButton";
 import TaskCard from "@/components/TaskCard";
 import VoiceOverlay from "@/components/VoiceOverlay";
+import VideoOverlay from "@/components/VideoOverlay";
 import PriorityMatrix from "@/components/PriorityMatrix";
 import { SubscriptionOnboarding } from "@/components/SubscriptionOnboarding";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Keyboard, Mic, Sparkles, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Keyboard, Mic, Video, Sparkles, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import type { Task, TeamMember, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -28,6 +29,7 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const [voiceOverlayOpen, setVoiceOverlayOpen] = useState(false);
+  const [videoOverlayOpen, setVideoOverlayOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [textInput, setTextInput] = useState("");
   const [textAnalysis, setTextAnalysis] = useState<any>(null);
@@ -214,7 +216,7 @@ export default function Dashboard() {
         </div>
 
         <Tabs defaultValue="voice" className="w-full max-w-2xl">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="voice" data-testid="tab-voice">
               <Mic className="h-4 w-4 mr-2" />
               Voice
@@ -222,6 +224,10 @@ export default function Dashboard() {
             <TabsTrigger value="text" data-testid="tab-text">
               <Keyboard className="h-4 w-4 mr-2" />
               Text
+            </TabsTrigger>
+            <TabsTrigger value="video" data-testid="tab-video">
+              <Video className="h-4 w-4 mr-2" />
+              Video
             </TabsTrigger>
           </TabsList>
 
@@ -333,6 +339,26 @@ export default function Dashboard() {
               </Card>
             )}
           </TabsContent>
+
+          <TabsContent value="video" className="mt-6">
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Record or upload a video message and let AI transcribe and analyze it
+              </p>
+              <Button
+                onClick={() => setVideoOverlayOpen(true)}
+                size="lg"
+                data-testid="button-video-activate"
+              >
+                <Video className="h-5 w-5 mr-2" />
+                Record Video Message
+              </Button>
+              <p className="text-xs text-muted-foreground text-center max-w-md">
+                Perfect for detailed instructions or walkthroughs. Maximum 10 minutes.
+                AI will transcribe your speech and create a task automatically.
+              </p>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -374,6 +400,11 @@ export default function Dashboard() {
       <VoiceOverlay
         isOpen={voiceOverlayOpen}
         onClose={() => setVoiceOverlayOpen(false)}
+      />
+
+      <VideoOverlay
+        isOpen={videoOverlayOpen}
+        onClose={() => setVideoOverlayOpen(false)}
       />
 
       <SubscriptionOnboarding 

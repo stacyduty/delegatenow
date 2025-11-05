@@ -2,7 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { analyzeVoiceTask } from "./openai";
+import { analyzeVoiceTask, transcribeAudio } from "./openai";
+import { extractAudioFromVideo, getVideoInfo } from "./videoProcessor";
+import multer from "multer";
+import path from "path";
+import fs from "fs/promises";
 import {
   insertTaskSchema,
   insertTeamMemberSchema,
@@ -41,6 +45,22 @@ if (!process.env.STRIPE_PRICE_ID) {
   throw new Error('Missing required Stripe secret: STRIPE_PRICE_ID');
 }
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Configure multer for video uploads
+const upload = multer({
+  dest: "uploads/",
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only video files are allowed.'));
+    }
+  },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
@@ -170,6 +190,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create task from video with AI transcription and analysis
+  app.post("/api/tasks/analyze-video", isAuthenticated, upload.single('video'), async (req: any, res) => {
+    let videoPath: string | undefined;
+    let audioPath: string | undefined;
+
+    try {
+      const userId = req.user.claims.sub;
+      
+      if (!req.file) {
+        return res.status(400).json({ error: "No video file provided" });
+      }
+
+      videoPath = req.file.path;
+      console.log(`[Video Processing] Received video: ${videoPath}, size: ${req.file.size} bytes`);
+
+      if (!videoPath) {
+        throw new Error("Video path is undefined");
+      }
+
+      // Get video info
+      const videoInfo = await getVideoInfo(videoPath);
+      console.log(`[Video Processing] Video info:`, videoInfo);
+
+      // Check video duration (max 10 minutes for cost control)
+      if (videoInfo.duration > 600) {
+        throw new Error("Video is too long. Maximum duration is 10 minutes.");
+      }
+
+      // Extract audio from video
+      console.log(`[Video Processing] Extracting audio from video...`);
+      const { audioPath: extractedAudioPath, cleanup } = await extractAudioFromVideo(videoPath);
+      audioPath = extractedAudioPath;
+      
+      if (!audioPath) {
+        throw new Error("Audio extraction failed - audioPath is undefined");
+      }
+      
+      console.log(`[Video Processing] Audio extracted: ${audioPath}`);
+
+      // Transcribe audio with Whisper
+      console.log(`[Video Processing] Transcribing audio with Whisper...`);
+      const startTime = Date.now();
+      const transcript = await transcribeAudio(audioPath);
+      const transcriptionTime = Date.now() - startTime;
+      console.log(`[Video Processing] Transcription complete (${transcriptionTime}ms): ${transcript.substring(0, 100)}...`);
+
+      if (!transcript || transcript.trim().length === 0) {
+        throw new Error("No speech detected in video");
+      }
+
+      // Get team members for AI to suggest assignee
+      const teamMembers = await storage.getTeamMembers(userId);
+      const teamMemberNames = teamMembers.map(tm => tm.name);
+
+      // Analyze task with AI (same as voice)
+      console.log(`[Video Processing] Analyzing transcript with AI...`);
+      const analysisStartTime = Date.now();
+      const analysis = await analyzeVoiceTask(transcript, teamMemberNames);
+      const analysisTime = Date.now() - analysisStartTime;
+      const totalProcessingTime = Date.now() - startTime;
+
+      console.log('[Video Processing] AI suggested assignee:', analysis.suggestedAssignee);
+
+      // Find suggested team member
+      let suggestedTeamMember = null;
+      if (analysis.suggestedAssignee) {
+        suggestedTeamMember = teamMembers.find(
+          tm => tm.name.toLowerCase() === analysis.suggestedAssignee?.toLowerCase()
+        );
+        console.log('[Video Processing] Matched team member:', suggestedTeamMember?.name || 'Not found');
+      }
+
+      // Create the task
+      const task = await storage.createTask({
+        userId: userId,
+        teamMemberId: suggestedTeamMember?.id || null,
+        title: analysis.title,
+        description: analysis.description,
+        voiceTranscript: transcript,
+        impact: analysis.impact,
+        urgency: analysis.urgency,
+        aiAnalysis: JSON.stringify(analysis.smartObjectives),
+        suggestedAssignee: analysis.suggestedAssignee,
+        status: "delegated",
+        progress: 0,
+        dueDate: null,
+      });
+
+      // Record voice history (video is essentially voice with visuals)
+      await storage.createVoiceHistory({
+        userId: userId,
+        taskId: task.id,
+        transcript,
+        processingTime: totalProcessingTime,
+        success: true,
+      });
+
+      // Create notification if assigned to team member
+      if (suggestedTeamMember) {
+        await storage.createNotification({
+          userId: userId,
+          taskId: task.id,
+          type: "task_assigned",
+          title: "New Task Assigned (from Video)",
+          message: `Task "${task.title}" has been assigned to ${suggestedTeamMember.name}`,
+        });
+
+        // Update team member's active task count
+        await storage.updateTeamMember(suggestedTeamMember.id, {
+          activeTasks: (suggestedTeamMember.activeTasks || 0) + 1,
+        });
+      }
+
+      // Clean up video and audio files
+      await cleanup();
+      console.log(`[Video Processing] Cleanup complete`);
+
+      res.json({ 
+        task, 
+        analysis,
+        videoInfo: {
+          duration: videoInfo.duration,
+          size: videoInfo.size,
+        },
+        processingStats: {
+          transcriptionTime,
+          analysisTime,
+          totalProcessingTime,
+        }
+      });
+    } catch (error) {
+      // Clean up files on error
+      if (videoPath) {
+        try {
+          await fs.unlink(videoPath);
+        } catch (e) {
+          console.error("Error deleting video file:", e);
+        }
+      }
+      if (audioPath) {
+        try {
+          await fs.unlink(audioPath);
+        } catch (e) {
+          console.error("Error deleting audio file:", e);
+        }
+      }
+
+      console.error("Error processing video:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to process video" 
+      });
+    }
+  });
+
   // Create task manually (without AI analysis)
   app.post("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
@@ -213,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate update data
       const updateSchema = insertTaskSchema.partial().omit({ userId: true });
       const validatedUpdates = updateSchema.parse(req.body);
-      const updates = validatedUpdates;
+      const updates: any = validatedUpdates;
       
       // Handle team member changes
       if (updates.teamMemberId !== undefined && updates.teamMemberId !== task.teamMemberId) {

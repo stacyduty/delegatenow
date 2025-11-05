@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import fs from "fs";
 
 // This is using Replit's AI Integrations service, which provides OpenAI-compatible API access without requiring your own OpenAI API key.
 const openai = new OpenAI({
@@ -98,5 +99,22 @@ Return ONLY valid JSON with this exact structure:
   } catch (error) {
     console.error("Error analyzing task with AI:", error);
     throw new Error("Failed to analyze task");
+  }
+}
+
+export async function transcribeAudio(audioFilePath: string): Promise<string> {
+  try {
+    const audioFile = fs.createReadStream(audioFilePath);
+    
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioFile,
+      model: "whisper-1",
+      response_format: "text",
+    });
+
+    return transcription;
+  } catch (error) {
+    console.error("Error transcribing audio with Whisper:", error);
+    throw new Error("Failed to transcribe audio");
   }
 }
