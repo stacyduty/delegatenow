@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Link2, Link2Off, ExternalLink, CheckCircle2, Zap, MessageSquare, Video } from "lucide-react";
-import { SiSlack, SiGmail, SiGooglemeet } from "react-icons/si";
+import { Link2, Link2Off, ExternalLink, CheckCircle2, Zap, MessageSquare, Video, FolderOpen } from "lucide-react";
+import { SiSlack, SiGmail, SiGooglemeet, SiGoogledrive } from "react-icons/si";
 
 interface Integration {
   id: string;
@@ -42,6 +42,12 @@ interface GoogleMeetStatus {
   message?: string;
 }
 
+interface GoogleDriveStatus {
+  connected: boolean;
+  status?: string;
+  message?: string;
+}
+
 export default function Integrations() {
   const { toast } = useToast();
   const [connectingSlack, setConnectingSlack] = useState(false);
@@ -57,6 +63,10 @@ export default function Integrations() {
 
   const { data: googleMeetStatus, isFetching: googleMeetFetching } = useQuery<GoogleMeetStatus>({
     queryKey: ["/api/integrations/google-meet"],
+  });
+
+  const { data: googleDriveStatus, isFetching: googleDriveFetching } = useQuery<GoogleDriveStatus>({
+    queryKey: ["/api/integrations/google-drive"],
   });
 
   const testSlackMutation = useMutation({
@@ -214,6 +224,26 @@ export default function Integrations() {
     },
   });
 
+  // Google Drive mutations
+  const testGoogleDriveMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/integrations/google-drive/test", "POST", {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Test folder created",
+        description: data.webViewLink ? `Folder: ${data.folderName}` : "Test folder created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to create test folder",
+        description: error.message,
+      });
+    },
+  });
+
   const integrations: Integration[] = [
     {
       id: "slack",
@@ -261,6 +291,21 @@ export default function Integrations() {
         "Calendar integration for meetings",
         "One-click meeting creation",
         "Share meeting links with team",
+      ],
+      tier: "free",
+    },
+    {
+      id: "google-drive",
+      name: "Google Drive",
+      description: "Attach files from Google Drive to tasks and export task data to Drive. Seamlessly manage task documents, export reports, and share files with your team.",
+      icon: SiGoogledrive,
+      color: "bg-[#4285F4]",
+      connected: googleDriveStatus?.connected || false,
+      capabilities: [
+        "Attach Drive files to tasks",
+        "Export task data as JSON",
+        "Upload files to Drive folders",
+        "Search and browse Drive files",
       ],
       tier: "free",
     },
@@ -416,7 +461,20 @@ export default function Integrations() {
                         {testGoogleMeetMutation.isPending ? "Creating..." : "Test"}
                       </Button>
                     )}
-                    {integration.id !== "google-meet" && (
+                    {integration.id === "google-drive" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => testGoogleDriveMutation.mutate()}
+                        disabled={testGoogleDriveMutation.isPending}
+                        className="flex-1"
+                        data-testid="button-test-google-drive"
+                      >
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        {testGoogleDriveMutation.isPending ? "Creating..." : "Test"}
+                      </Button>
+                    )}
+                    {integration.id !== "google-meet" && integration.id !== "google-drive" && (
                       <Button
                         size="sm"
                         variant="destructive"
@@ -499,6 +557,11 @@ export default function Integrations() {
                         toast({
                           title: "Connect Google Calendar",
                           description: "Google Meet uses Google Calendar integration. Please connect Google Calendar from the Tools pane to enable Google Meet.",
+                        });
+                      } else if (integration.id === "google-drive") {
+                        toast({
+                          title: "Connect Google Drive",
+                          description: "Please connect Google Drive from the Tools pane (left sidebar) to enable file management features.",
                         });
                       }
                     }}

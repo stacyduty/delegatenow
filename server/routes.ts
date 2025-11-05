@@ -2598,6 +2598,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ INTEGRATION ROUTES: GOOGLE DRIVE ============
+
+  // Get Google Drive status
+  app.get('/api/integrations/google-drive', isAuthenticated, async (req: any, res) => {
+    try {
+      const { getUncachableGoogleDriveClient } = await import('./integrations/googleDrive');
+      
+      try {
+        await getUncachableGoogleDriveClient();
+        res.json({
+          connected: true,
+          status: 'active',
+          message: 'Google Drive is connected'
+        });
+      } catch (error) {
+        res.json({ connected: false });
+      }
+    } catch (error) {
+      console.error("Error checking Google Drive status:", error);
+      res.status(500).json({ error: "Failed to check Google Drive status" });
+    }
+  });
+
+  // Test Google Drive - create test folder
+  app.post('/api/integrations/google-drive/test', isAuthenticated, async (req: any, res) => {
+    try {
+      const { createFolder } = await import('./integrations/googleDrive');
+      
+      const folder = await createFolder({
+        folderName: `Deleg8te Test - ${new Date().toISOString().split('T')[0]}`,
+      });
+
+      res.json({
+        success: true,
+        message: "Test folder created successfully",
+        folderId: folder.id,
+        folderName: folder.name,
+        webViewLink: folder.webViewLink,
+      });
+    } catch (error: any) {
+      console.error("Error creating test folder:", error);
+      res.status(500).json({ error: error.message || "Failed to create test folder" });
+    }
+  });
+
+  // List files in Google Drive
+  app.get('/api/integrations/google-drive/files', isAuthenticated, async (req: any, res) => {
+    try {
+      const { folderId, query, maxResults } = req.query;
+      const { listFiles } = await import('./integrations/googleDrive');
+      
+      const files = await listFiles({
+        folderId: folderId as string | undefined,
+        query: query as string | undefined,
+        maxResults: maxResults ? parseInt(maxResults as string) : undefined,
+      });
+
+      res.json({ files });
+    } catch (error: any) {
+      console.error("Error listing Drive files:", error);
+      res.status(500).json({ error: error.message || "Failed to list files" });
+    }
+  });
+
+  // Search files in Google Drive
+  app.get('/api/integrations/google-drive/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const { q, maxResults } = req.query;
+      
+      if (!q) {
+        return res.status(400).json({ error: "Search query (q) is required" });
+      }
+
+      const { searchFiles } = await import('./integrations/googleDrive');
+      
+      const files = await searchFiles(
+        q as string,
+        maxResults ? parseInt(maxResults as string) : 20
+      );
+
+      res.json({ files });
+    } catch (error: any) {
+      console.error("Error searching Drive files:", error);
+      res.status(500).json({ error: error.message || "Failed to search files" });
+    }
+  });
+
+  // Export task to Google Drive as JSON
+  app.post('/api/integrations/google-drive/export-task', isAuthenticated, async (req: any, res) => {
+    try {
+      const exportTaskSchema = z.object({
+        taskId: z.string().min(1),
+        folderId: z.string().optional(),
+      });
+
+      const parsed = exportTaskSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid request data",
+          details: parsed.error.flatten().fieldErrors 
+        });
+      }
+
+      const { taskId, folderId } = parsed.data;
+      const userId = req.user.claims.sub;
+
+      // Get task
+      const task = await storage.getTask(taskId);
+      if (!task || task.userId !== userId) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      // Get team member if assigned
+      let teamMember = null;
+      if (task.teamMemberId) {
+        teamMember = await storage.getTeamMember(task.teamMemberId);
+      }
+
+      // Prepare task export data
+      const exportData = {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        assignee: teamMember ? teamMember.name : 'Unassigned',
+        impact: task.impact,
+        urgency: task.urgency,
+        status: task.status,
+        progress: task.progress,
+        dueDate: task.dueDate,
+        createdAt: task.createdAt,
+        smartObjectives: task.aiAnalysis,
+        voiceTranscript: task.voiceTranscript,
+      };
+
+      const { exportTaskToJson } = await import('./integrations/googleDrive');
+      
+      const file = await exportTaskToJson(exportData, folderId);
+
+      res.json({
+        success: true,
+        message: "Task exported to Google Drive",
+        fileId: file.id,
+        fileName: file.name,
+        webViewLink: file.webViewLink,
+      });
+    } catch (error: any) {
+      console.error("Error exporting task to Drive:", error);
+      res.status(500).json({ error: error.message || "Failed to export task" });
+    }
+  });
+
+  // Upload file to Google Drive
+  app.post('/api/integrations/google-drive/upload', isAuthenticated, async (req: any, res) => {
+    try {
+      const uploadSchema = z.object({
+        fileName: z.string().min(1),
+        mimeType: z.string().min(1),
+        fileContent: z.string(), // base64 encoded
+        folderId: z.string().optional(),
+      });
+
+      const parsed = uploadSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid request data",
+          details: parsed.error.flatten().fieldErrors 
+        });
+      }
+
+      const { fileName, mimeType, fileContent, folderId } = parsed.data;
+
+      // Decode base64 content
+      const buffer = Buffer.from(fileContent, 'base64');
+
+      const { uploadFile } = await import('./integrations/googleDrive');
+      
+      const file = await uploadFile({
+        fileName,
+        mimeType,
+        fileContent: buffer,
+        folderId,
+      });
+
+      res.json({
+        success: true,
+        message: "File uploaded successfully",
+        fileId: file.id,
+        fileName: file.name,
+        webViewLink: file.webViewLink,
+        size: file.size,
+      });
+    } catch (error: any) {
+      console.error("Error uploading to Drive:", error);
+      res.status(500).json({ error: error.message || "Failed to upload file" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
