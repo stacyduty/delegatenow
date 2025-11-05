@@ -37,6 +37,7 @@ import {
   getFreeBusyInfo,
 } from "./integrations/googleCalendar";
 import { analyzeEmailForTask, htmlToPlainText } from "./emailParser";
+import { emitEvent } from "./integrations/events";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
@@ -154,6 +155,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         progress: 0,
         dueDate: null,
       });
+
+      // Emit event for integrations (e.g., Slack notifications)
+      emitEvent('task.created', { task }, userId, storage);
 
       // Record voice history
       await storage.createVoiceHistory({
@@ -278,6 +282,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dueDate: null,
       });
 
+      // Emit event for integrations (e.g., Slack notifications)
+      emitEvent('task.created', { task }, userId, storage);
+
       // Record voice history (video is essentially voice with visuals)
       await storage.createVoiceHistory({
         userId: userId,
@@ -354,6 +361,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const task = await storage.createTask(validatedData);
+
+      // Emit event for integrations (e.g., Slack notifications)
+      emitEvent('task.created', { task }, userId, storage);
 
       // Update team member's active task count if assigned
       if (task.teamMemberId) {
@@ -1979,6 +1989,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting recurring pattern:", error);
       res.status(500).json({ error: "Failed to delete recurring pattern" });
+    }
+  });
+
+  // ============ INTEGRATION ROUTES: SLACK ============
+
+  // Temporary state storage for OAuth CSRF protection
+  const oauthStates = new Map<string, { state: string; expiresAt: number }>();
+
+  // Get Slack OAuth authorization URL
+  app.get('/api/integrations/slack/install', isAuthenticated, async (req: any, res) => {
+    try {
+      const clientId = process.env.SLACK_CLIENT_ID;
+      if (!clientId) {
+        return res.status(500).json({ error: "Slack integration not configured. Please set SLACK_CLIENT_ID" });
+      }
+
+      const userId = req.user.claims.sub;
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/integrations/slack/callback`;
+      const scopes = ['chat:write', 'channels:read', 'commands', 'users:read'].join(',');
+      
+      // Generate CSRF state token
+      const state = crypto.randomBytes(32).toString('hex');
+      oauthStates.set(userId, {
+        state,
+        expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+      });
+      
+      const authUrl = `https://slack.com/oauth/v2/authorize?client_id=${clientId}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+      
+      res.json({ url: authUrl });
+    } catch (error: any) {
+      console.error("Error generating Slack OAuth URL:", error);
+      res.status(500).json({ error: "Failed to generate Slack authorization URL" });
+    }
+  });
+
+  // Handle Slack OAuth callback
+  app.get('/api/integrations/slack/callback', isAuthenticated, async (req: any, res) => {
+    try {
+      const { code, state } = req.query;
+      if (!code || !state) {
+        return res.redirect('/?error=slack_oauth_failed');
+      }
+
+      const userId = req.user.claims.sub;
+      
+      // Verify CSRF state token
+      const storedState = oauthStates.get(userId);
+      if (!storedState || storedState.state !== state || storedState.expiresAt < Date.now()) {
+        console.error("Invalid or expired OAuth state");
+        oauthStates.delete(userId);
+        return res.redirect('/?error=slack_oauth_csrf_failed');
+      }
+      
+      // Clean up state after verification
+      oauthStates.delete(userId);
+
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/integrations/slack/callback`;
+      const { exchangeCodeForToken } = await import('./integrations/slack');
+      const tokenResponse = await exchangeCodeForToken(code as string, redirectUri);
+
+      if (!tokenResponse.ok || !tokenResponse.access_token) {
+        console.error("Slack OAuth error:", tokenResponse.error);
+        return res.redirect('/?error=slack_oauth_failed');
+      }
+
+      // Store integration
+      const credentials = JSON.stringify({
+        accessToken: tokenResponse.access_token,
+        teamId: tokenResponse.team?.id,
+        teamName: tokenResponse.team?.name,
+        userId: tokenResponse.authed_user?.id,
+      });
+
+      // Check if integration already exists
+      const existing = await storage.getIntegration(userId, 'slack');
+      if (existing) {
+        await storage.updateIntegration(existing.id, {
+          credentials,
+          status: 'active',
+          lastSyncAt: new Date(),
+        });
+      } else {
+        await storage.createIntegration({
+          userId,
+          integrationId: 'slack',
+          credentials,
+          settings: {},
+          status: 'active',
+          lastSyncAt: new Date(),
+        });
+      }
+
+      res.redirect('/?integration=slack&status=success');
+    } catch (error: any) {
+      console.error("Error in Slack OAuth callback:", error);
+      res.redirect('/?error=slack_oauth_failed');
+    }
+  });
+
+  // Get Slack integration status
+  app.get('/api/integrations/slack', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integration = await storage.getIntegration(userId, 'slack');
+      
+      if (!integration) {
+        return res.json({ connected: false });
+      }
+
+      const credentials = JSON.parse(integration.credentials || '{}');
+      res.json({
+        connected: true,
+        status: integration.status,
+        teamName: credentials.teamName,
+        lastSync: integration.lastSyncAt,
+      });
+    } catch (error) {
+      console.error("Error fetching Slack integration:", error);
+      res.status(500).json({ error: "Failed to fetch Slack integration status" });
+    }
+  });
+
+  // Send test notification to Slack
+  app.post('/api/integrations/slack/test', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integration = await storage.getIntegration(userId, 'slack');
+      
+      if (!integration) {
+        return res.status(404).json({ error: "Slack not connected" });
+      }
+
+      const credentials = JSON.parse(integration.credentials || '{}');
+      const { postMessage } = await import('./integrations/slack');
+      
+      await postMessage(
+        credentials.accessToken,
+        'general',
+        'Test notification from Deleg8te.ai! Your integration is working correctly. 🎉'
+      );
+
+      res.json({ success: true, message: "Test notification sent to #general" });
+    } catch (error: any) {
+      console.error("Error sending Slack test notification:", error);
+      res.status(500).json({ error: error.message || "Failed to send test notification" });
+    }
+  });
+
+  // Disconnect Slack integration
+  app.delete('/api/integrations/slack', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integration = await storage.getIntegration(userId, 'slack');
+      
+      if (!integration) {
+        return res.status(404).json({ error: "Slack integration not found" });
+      }
+
+      await storage.deleteIntegration(integration.id);
+      res.json({ success: true, message: "Slack integration disconnected" });
+    } catch (error) {
+      console.error("Error disconnecting Slack:", error);
+      res.status(500).json({ error: "Failed to disconnect Slack integration" });
     }
   });
 

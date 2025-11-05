@@ -16,8 +16,13 @@ import {
   type TaskWatcher, type InsertTaskWatcher,
   type TaskTemplate, type InsertTaskTemplate,
   type RecurringTaskPattern, type InsertRecurringTaskPattern,
+  type Integration, type InsertIntegration,
+  type Webhook, type InsertWebhook,
+  type ApiKey, type InsertApiKey,
+  type AutomationRule, type InsertAutomationRule,
   users, teamMembers, tasks, notifications, voiceHistory, calendarEvents, emailInbox,
-  comments, attachments, subtasks, tags, taskTags, activityLog, taskWatchers, taskTemplates, recurringTaskPatterns
+  comments, attachments, subtasks, tags, taskTags, activityLog, taskWatchers, taskTemplates, recurringTaskPatterns,
+  integrations, webhooks, apiKeys, automationRules
 } from "@shared/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 
@@ -118,6 +123,34 @@ export interface IStorage {
   createRecurringTaskPattern(pattern: InsertRecurringTaskPattern): Promise<RecurringTaskPattern>;
   updateRecurringTaskPattern(id: string, pattern: Partial<RecurringTaskPattern>): Promise<RecurringTaskPattern | undefined>;
   deleteRecurringTaskPattern(id: string): Promise<void>;
+
+  // Integration operations
+  getIntegrations(userId: string): Promise<Integration[]>;
+  getIntegration(userId: string, integrationId: string): Promise<Integration | undefined>;
+  createIntegration(integration: InsertIntegration): Promise<Integration>;
+  updateIntegration(id: string, integration: Partial<Integration>): Promise<Integration | undefined>;
+  deleteIntegration(id: string): Promise<void>;
+
+  // Webhook operations (PRO feature)
+  getWebhooksByUser(userId: string): Promise<Webhook[]>;
+  getWebhook(id: string): Promise<Webhook | undefined>;
+  createWebhook(webhook: InsertWebhook & { secret: string }): Promise<Webhook>;
+  updateWebhook(id: string, webhook: Partial<Webhook>): Promise<Webhook | undefined>;
+  deleteWebhook(id: string): Promise<void>;
+
+  // API Key operations (PRO feature)
+  getApiKeysByUser(userId: string): Promise<ApiKey[]>;
+  getApiKeyByKey(key: string): Promise<ApiKey | undefined>;
+  createApiKey(apiKey: InsertApiKey & { key: string }): Promise<ApiKey>;
+  deleteApiKey(id: string): Promise<void>;
+  updateApiKeyUsage(id: string): Promise<void>;
+
+  // Automation Rule operations (PRO feature)
+  getAutomationRulesByUser(userId: string): Promise<AutomationRule[]>;
+  getAutomationRule(id: string): Promise<AutomationRule | undefined>;
+  createAutomationRule(rule: InsertAutomationRule): Promise<AutomationRule>;
+  updateAutomationRule(id: string, rule: Partial<AutomationRule>): Promise<AutomationRule | undefined>;
+  deleteAutomationRule(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -472,6 +505,108 @@ export class DbStorage implements IStorage {
 
   async deleteRecurringTaskPattern(id: string): Promise<void> {
     await db.delete(recurringTaskPatterns).where(eq(recurringTaskPatterns.id, id));
+  }
+
+  // Integration operations
+  async getIntegrations(userId: string): Promise<Integration[]> {
+    return await db.select().from(integrations).where(eq(integrations.userId, userId));
+  }
+
+  async getIntegration(userId: string, integrationId: string): Promise<Integration | undefined> {
+    const result = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.userId, userId), eq(integrations.integrationId, integrationId)))
+      .limit(1);
+    return result[0];
+  }
+
+  async createIntegration(integration: InsertIntegration): Promise<Integration> {
+    const result = await db.insert(integrations).values(integration).returning();
+    return result[0];
+  }
+
+  async updateIntegration(id: string, integration: Partial<Integration>): Promise<Integration | undefined> {
+    const result = await db.update(integrations).set({ ...integration, updatedAt: new Date() }).where(eq(integrations.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteIntegration(id: string): Promise<void> {
+    await db.delete(integrations).where(eq(integrations.id, id));
+  }
+
+  // Webhook operations (PRO feature)
+  async getWebhooksByUser(userId: string): Promise<Webhook[]> {
+    return await db.select().from(webhooks).where(eq(webhooks.userId, userId));
+  }
+
+  async getWebhook(id: string): Promise<Webhook | undefined> {
+    const result = await db.select().from(webhooks).where(eq(webhooks.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createWebhook(webhook: InsertWebhook & { secret: string }): Promise<Webhook> {
+    const result = await db.insert(webhooks).values(webhook).returning();
+    return result[0];
+  }
+
+  async updateWebhook(id: string, webhook: Partial<Webhook>): Promise<Webhook | undefined> {
+    const result = await db.update(webhooks).set({ ...webhook, updatedAt: new Date() }).where(eq(webhooks.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteWebhook(id: string): Promise<void> {
+    await db.delete(webhooks).where(eq(webhooks.id, id));
+  }
+
+  // API Key operations (PRO feature)
+  async getApiKeysByUser(userId: string): Promise<ApiKey[]> {
+    return await db.select().from(apiKeys).where(eq(apiKeys.userId, userId));
+  }
+
+  async getApiKeyByKey(key: string): Promise<ApiKey | undefined> {
+    const result = await db.select().from(apiKeys).where(eq(apiKeys.key, key)).limit(1);
+    return result[0];
+  }
+
+  async createApiKey(apiKey: InsertApiKey & { key: string }): Promise<ApiKey> {
+    const result = await db.insert(apiKeys).values(apiKey).returning();
+    return result[0];
+  }
+
+  async deleteApiKey(id: string): Promise<void> {
+    await db.delete(apiKeys).where(eq(apiKeys.id, id));
+  }
+
+  async updateApiKeyUsage(id: string): Promise<void> {
+    await db.update(apiKeys).set({
+      lastUsedAt: new Date(),
+      requestCount: sql`${apiKeys.requestCount} + 1`
+    }).where(eq(apiKeys.id, id));
+  }
+
+  // Automation Rule operations (PRO feature)
+  async getAutomationRulesByUser(userId: string): Promise<AutomationRule[]> {
+    return await db.select().from(automationRules).where(eq(automationRules.userId, userId));
+  }
+
+  async getAutomationRule(id: string): Promise<AutomationRule | undefined> {
+    const result = await db.select().from(automationRules).where(eq(automationRules.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createAutomationRule(rule: InsertAutomationRule): Promise<AutomationRule> {
+    const result = await db.insert(automationRules).values(rule).returning();
+    return result[0];
+  }
+
+  async updateAutomationRule(id: string, rule: Partial<AutomationRule>): Promise<AutomationRule | undefined> {
+    const result = await db.update(automationRules).set({ ...rule, updatedAt: new Date() }).where(eq(automationRules.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteAutomationRule(id: string): Promise<void> {
+    await db.delete(automationRules).where(eq(automationRules.id, id));
   }
 }
 
