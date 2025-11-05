@@ -6,13 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Link2, Link2Off, ExternalLink, CheckCircle2, Zap, MessageSquare, Video, FolderOpen } from "lucide-react";
+import { Link2, Link2Off, ExternalLink, CheckCircle2, Zap, MessageSquare, Video, FolderOpen, Cloud, FileText, Mail } from "lucide-react";
 import { 
   SiSlack, 
   SiGmail, 
   SiGooglemeet, 
   SiGoogledrive,
-  SiMicrosoftoutlook,
   SiZendesk,
   SiDropbox,
   SiTwilio,
@@ -24,8 +23,6 @@ import {
   SiGithub,
   SiNotion,
   SiDiscord,
-  SiMicrosoftonedrive,
-  SiMicrosoftsharepoint,
   SiTrello,
   SiGooglesheets,
   SiGoogledocs
@@ -335,7 +332,7 @@ export default function Integrations() {
       id: "outlook",
       name: "Outlook",
       description: "Sync tasks with Outlook email and calendar. Turn emails into tasks, send task reminders via Outlook, and integrate with your Microsoft 365 workflow.",
-      icon: SiMicrosoftoutlook,
+      icon: Mail,
       color: "bg-[#0078D4]",
       connected: false,
       capabilities: [
@@ -515,7 +512,7 @@ export default function Integrations() {
       id: "onedrive",
       name: "OneDrive",
       description: "Store task files in Microsoft OneDrive. Seamlessly integrate with Microsoft 365, share documents, and access files across all your devices.",
-      icon: SiMicrosoftonedrive,
+      icon: Cloud,
       color: "bg-[#0078D4]",
       connected: false,
       capabilities: [
@@ -530,7 +527,7 @@ export default function Integrations() {
       id: "sharepoint",
       name: "SharePoint",
       description: "Manage team documents and collaboration spaces. Connect tasks to SharePoint sites, libraries, and lists for enterprise-grade document management.",
-      icon: SiMicrosoftsharepoint,
+      icon: FileText,
       color: "bg-[#0078D4]",
       connected: false,
       capabilities: [
