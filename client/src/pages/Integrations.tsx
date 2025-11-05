@@ -67,6 +67,12 @@ interface GoogleDriveStatus {
   message?: string;
 }
 
+interface NotionStatus {
+  connected: boolean;
+  status?: string;
+  message?: string;
+}
+
 export default function Integrations() {
   const { toast } = useToast();
   const [connectingSlack, setConnectingSlack] = useState(false);
@@ -86,6 +92,10 @@ export default function Integrations() {
 
   const { data: googleDriveStatus, isFetching: googleDriveFetching } = useQuery<GoogleDriveStatus>({
     queryKey: ["/api/integrations/google-drive"],
+  });
+
+  const { data: notionStatus, isFetching: notionFetching } = useQuery<NotionStatus>({
+    queryKey: ["/api/integrations/notion"],
   });
 
   const testSlackMutation = useMutation({
@@ -258,6 +268,26 @@ export default function Integrations() {
       toast({
         variant: "destructive",
         title: "Failed to create test folder",
+        description: error.message,
+      });
+    },
+  });
+
+  // Notion mutations
+  const testNotionMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/integrations/notion/test", "POST", {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Notion connection verified",
+        description: data.message || "Successfully connected to Notion",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to test Notion connection",
         description: error.message,
       });
     },
@@ -484,7 +514,7 @@ export default function Integrations() {
       description: "Sync tasks with Notion databases and workspaces. Export task data, link to Notion pages, and maintain a unified knowledge base across your organization.",
       icon: SiNotion,
       color: "bg-[#000000]",
-      connected: false,
+      connected: notionStatus?.connected || false,
       capabilities: [
         "Sync tasks to Notion databases",
         "Link to Notion workspace pages",
@@ -748,7 +778,20 @@ export default function Integrations() {
                         {testGoogleDriveMutation.isPending ? "Creating..." : "Test"}
                       </Button>
                     )}
-                    {integration.id !== "google-meet" && integration.id !== "google-drive" && (
+                    {integration.id === "notion" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => testNotionMutation.mutate()}
+                        disabled={testNotionMutation.isPending}
+                        className="flex-1"
+                        data-testid="button-test-notion"
+                      >
+                        <Zap className="h-4 w-4 mr-2" />
+                        {testNotionMutation.isPending ? "Testing..." : "Test"}
+                      </Button>
+                    )}
+                    {integration.id !== "google-meet" && integration.id !== "google-drive" && integration.id !== "notion" && (
                       <Button
                         size="sm"
                         variant="destructive"

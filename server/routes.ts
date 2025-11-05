@@ -2795,6 +2795,201 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== NOTION INTEGRATION ====================
+  
+  // Get Notion connection status
+  app.get('/api/integrations/notion', isAuthenticated, async (req: any, res) => {
+    try {
+      const { isNotionConnected } = await import('./integrations/notion');
+      const connected = await isNotionConnected();
+      
+      res.json({
+        connected,
+        status: connected ? "Connected to Notion" : "Not connected",
+      });
+    } catch (error: any) {
+      res.json({
+        connected: false,
+        status: "Not connected",
+        message: error.message,
+      });
+    }
+  });
+
+  // List Notion databases
+  app.get('/api/integrations/notion/databases', isAuthenticated, async (req: any, res) => {
+    try {
+      const { listNotionDatabases } = await import('./integrations/notion');
+      const result = await listNotionDatabases();
+      
+      res.json({
+        success: true,
+        databases: result.results,
+      });
+    } catch (error: any) {
+      console.error("Error listing Notion databases:", error);
+      res.status(500).json({ error: error.message || "Failed to list databases" });
+    }
+  });
+
+  // Get specific Notion database
+  app.get('/api/integrations/notion/databases/:databaseId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { databaseId } = req.params;
+      const { getNotionDatabase } = await import('./integrations/notion');
+      const database = await getNotionDatabase(databaseId);
+      
+      res.json({
+        success: true,
+        database,
+      });
+    } catch (error: any) {
+      console.error("Error getting Notion database:", error);
+      res.status(500).json({ error: error.message || "Failed to get database" });
+    }
+  });
+
+  // Export task to Notion
+  app.post('/api/integrations/notion/export-task', isAuthenticated, async (req: any, res) => {
+    try {
+      const exportSchema = z.object({
+        taskId: z.string(),
+        databaseId: z.string(),
+      });
+
+      const parsed = exportSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid request data",
+          details: parsed.error.flatten().fieldErrors 
+        });
+      }
+
+      const { taskId, databaseId } = parsed.data;
+      const userId = req.user.claims.sub;
+
+      // Get all user tasks and find the one we need
+      const tasks = await storage.getTasks(userId);
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      // Get assignee name if exists
+      let assigneeName: string | undefined;
+      if (task.teamMemberId) {
+        const teamMembers = await storage.getTeamMembers(userId);
+        const assignee = teamMembers.find(tm => tm.id === task.teamMemberId);
+        assigneeName = assignee?.name;
+      }
+
+      const { createTaskInNotion } = await import('./integrations/notion');
+      
+      // Combine impact and urgency as priority
+      const priority = task.impact === 'high' || task.urgency === 'high' ? 'High' :
+                      task.impact === 'medium' || task.urgency === 'medium' ? 'Medium' : 'Low';
+      
+      const notionPage = await createTaskInNotion({
+        title: task.title,
+        description: task.description || undefined,
+        priority: priority,
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : undefined,
+        assignee: assigneeName,
+        databaseId,
+      });
+
+      res.json({
+        success: true,
+        message: "Task exported to Notion",
+        pageId: notionPage.id,
+        pageUrl: notionPage.url,
+      });
+    } catch (error: any) {
+      console.error("Error exporting task to Notion:", error);
+      res.status(500).json({ error: error.message || "Failed to export task" });
+    }
+  });
+
+  // Query Notion database
+  app.post('/api/integrations/notion/query', isAuthenticated, async (req: any, res) => {
+    try {
+      const querySchema = z.object({
+        databaseId: z.string(),
+        filter: z.any().optional(),
+      });
+
+      const parsed = querySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid request data",
+          details: parsed.error.flatten().fieldErrors 
+        });
+      }
+
+      const { databaseId, filter } = parsed.data;
+      const { queryNotionDatabase } = await import('./integrations/notion');
+      
+      const result = await queryNotionDatabase(databaseId, filter);
+
+      res.json({
+        success: true,
+        pages: result.results,
+        hasMore: result.has_more,
+        nextCursor: result.next_cursor,
+      });
+    } catch (error: any) {
+      console.error("Error querying Notion database:", error);
+      res.status(500).json({ error: error.message || "Failed to query database" });
+    }
+  });
+
+  // Search Notion
+  app.post('/api/integrations/notion/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const searchSchema = z.object({
+        query: z.string(),
+      });
+
+      const parsed = searchSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid request data",
+          details: parsed.error.flatten().fieldErrors 
+        });
+      }
+
+      const { query } = parsed.data;
+      const { searchNotion } = await import('./integrations/notion');
+      
+      const result = await searchNotion(query);
+
+      res.json({
+        success: true,
+        results: result.results,
+      });
+    } catch (error: any) {
+      console.error("Error searching Notion:", error);
+      res.status(500).json({ error: error.message || "Failed to search" });
+    }
+  });
+
+  // Test Notion integration
+  app.post('/api/integrations/notion/test', isAuthenticated, async (req: any, res) => {
+    try {
+      const { listNotionDatabases } = await import('./integrations/notion');
+      const result = await listNotionDatabases();
+      
+      res.json({
+        success: true,
+        message: `Found ${result.results.length} databases in your Notion workspace`,
+        databaseCount: result.results.length,
+      });
+    } catch (error: any) {
+      console.error("Error testing Notion connection:", error);
+      res.status(500).json({ error: error.message || "Failed to test Notion connection" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
