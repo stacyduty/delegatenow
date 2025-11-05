@@ -2,15 +2,7 @@
 
 ## Overview
 
-Deleg8te.ai is a voice-powered task delegation platform designed for executives to efficiently manage teams and tasks. The application enables users to speak their tasks, record video instructions, or type text, leveraging AI to analyze, prioritize, and delegate work automatically. Built with a modern tech stack, it features real-time task tracking, team management, analytics, and **Google Calendar integration** with an emphasis on executive productivity and minimal friction.
-
-**Core Value Proposition:** Transform voice, video, or text input into structured, delegated tasks with AI-powered analysis including impact assessment, urgency classification, and SMART objectives generation. Now includes enterprise-grade compliance features: formal task acceptance timestamps, expiry tracking, spending limits, and complete audit trails. **NEW: Google Calendar integration** for two-way sync, deadline tracking, and team availability. **NEW: Video delegation** with AI transcription via OpenAI Whisper.
-
-**Competitive Advantage:** Combines the AI-powered speed and productivity of modern tools ($1/month/user, instant deployment, voice-first interface, 14-day free trial with no credit card needed) with the compliance and governance features of enterprise delegation platforms (acceptance records, expiry management, audit trails) - without the $10k-15k setup fees or 7-180 day deployment times.
-
-**Competitive Position (Nov 2025):** Only voice-first delegation platform combining enterprise compliance + AI intelligence + consumer pricing. Main competitors: Voiset (voice-first productivity, no delegation), ClickUp Brain MAX (complex PM with voice add-on, $12-19/month), iDelegate (enterprise, $10k-15k setup + $30-50/month). Deleg8te.ai offers 90-97% cost savings while matching voice UX quality and exceeding delegation features. See COMPETITIVE_ANALYSIS_2025.md for full analysis.
-
-**Strategic Growth Plan (2025):** Addressing competitive weaknesses through two-track strategy: (1) Build lightweight integrations ecosystem (25+ native + webhook hub for 1,000+ via Zapier/Make) using free APIs, (2) Launch PRO tier at $3/month/user with automation, advanced analytics, API access, and white-label features - maintaining 75-90% cost advantage vs competitors while funding integration development and SOC 2 certification path. See INTEGRATION_PRO_STRATEGY.md for detailed roadmap.
+Deleg8te.ai is a voice-powered task delegation platform designed for executives to efficiently manage teams and tasks. It leverages AI to analyze, prioritize, and delegate work automatically from voice, video, or text input. The platform offers real-time task tracking, team management, analytics, and Google Calendar integration. Its core value proposition is transforming various inputs into structured, delegated tasks with AI-powered analysis, including impact assessment, urgency classification, and SMART objectives generation, while incorporating enterprise-grade compliance features like formal task acceptance, expiry tracking, spending limits, and audit trails. Deleg8te.ai aims to combine AI productivity with enterprise compliance at consumer-friendly pricing, offering significant cost savings compared to traditional solutions. Strategic growth involves building a lightweight integrations ecosystem and launching a PRO tier with advanced features.
 
 ## User Preferences
 
@@ -20,233 +12,38 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend Architecture
 
-**Framework & Build System:**
-- React with TypeScript for type-safe component development
-- Vite as the build tool and development server
-- Wouter for lightweight client-side routing
-- TanStack Query (React Query) for server state management with optimistic updates
-
-**UI Component Strategy:**
-- Radix UI primitives for accessible, unstyled components
-- shadcn/ui component library using the "new-york" style
-- Tailwind CSS for utility-first styling with custom design tokens
-- Custom theming system supporting light/dark modes with CSS variables
-
-**Design System:**
-- Typography: Inter for headers/UI, IBM Plex Sans for body text
-- Spacing: Tailwind scale (2, 4, 6, 8, 12, 16, 20, 24 units)
-- Layout: 12-column responsive grid system
-- Color system: HSL-based with semantic tokens (primary, secondary, muted, destructive, etc.)
-
-**State Management Approach:**
-- Server state handled via React Query with automatic caching and invalidation
-- Local UI state managed with React hooks
-- No global state management library - preference for component-level state
+The frontend uses React with TypeScript, Vite for building, Wouter for routing, and TanStack Query for server state management. UI components are built with Radix UI primitives and shadcn/ui, styled using Tailwind CSS with a custom theming system supporting light/dark modes. Typography uses Inter and IBM Plex Sans, with a 12-column responsive grid and an HSL-based color system. State management relies on React hooks for local UI state and React Query for server state, avoiding a global state management library.
 
 ### Backend Architecture
 
-**Server Framework:**
-- Express.js with TypeScript for API routes
-- HTTP server for REST endpoints
-- Middleware pipeline for logging, authentication, and request parsing
-
-**API Design:**
-- RESTful endpoints under `/api` namespace
-- Resource-based routing (tasks, team-members, notifications, voice-history)
-- JSON request/response format
-- Simple demo user authentication (temporary implementation pending proper auth)
-
-**Business Logic:**
-- Storage layer abstraction (`IStorage` interface) for database operations
-- Service layer for AI integration and task analysis
-- Separation of concerns between routes, storage, and external services
+The backend is built with Express.js and TypeScript, providing RESTful endpoints under the `/api` namespace for resources like tasks, team members, notifications, and voice history. It uses JSON for requests/responses and includes middleware for logging, authentication, and request parsing. Business logic separates concerns into routing, storage, and external services, with a defined `IStorage` interface for database operations and a service layer for AI integration.
 
 ### Data Storage
 
-**Database:**
-- PostgreSQL via Neon serverless database
-- Drizzle ORM for type-safe database queries and schema management
-- WebSocket pooling for database connections
-
-**Schema Design:**
-- `users`: Executive account holders with Stripe subscription tracking
-- `teamMembers`: Unlimited team members per user (Executive Plan feature)
-- `tasks`: Delegated tasks with impact/urgency classification, progress tracking, SMART objectives, AND compliance fields:
-  - `acceptedAt`: Formal acceptance timestamp for audit trail
-  - `expiryDate`: Delegation authority expiry with notification warnings
-  - `spendingLimit`: Optional financial authority cap (decimal precision: 15,2)
-- `notifications`: Real-time activity notifications
-- `voiceHistory`: Audit trail of voice input transcripts and AI analysis
-- `calendarEvents`: **NEW** Google Calendar event tracking with task linkage, sync status, and attendee management
-
-**Data Relationships:**
-- User → TeamMembers (one-to-many, cascade delete)
-- User → Tasks (one-to-many, cascade delete)
-- TeamMember → Tasks (one-to-many via teamMemberId foreign key)
-- User → Notifications (one-to-many)
-- User → VoiceHistory (one-to-many)
-- User → CalendarEvents (one-to-many, cascade delete) **NEW**
-- Task → CalendarEvent (optional one-to-one via taskId foreign key) **NEW**
+PostgreSQL, managed by Neon, is the primary database, utilizing Drizzle ORM for type-safe queries. The schema includes `users`, `teamMembers`, `tasks` (with compliance fields like `acceptedAt`, `expiryDate`, `spendingLimit`), `notifications`, `voiceHistory`, and `calendarEvents`. Key relationships exist between users and their team members, tasks, notifications, voice history, and calendar events, with tasks optionally linked to calendar events.
 
 ### Authentication & Authorization
 
-**Current Implementation:**
-- Demo user middleware auto-creating `demo@weighpay.com` user
-- bcrypt for password hashing
-- Session-based authentication with cookies
-- Temporary solution - indicates proper auth system is planned
-
-**Authorization Pattern:**
-- User context attached to all API requests via middleware
-- Resource ownership validated at storage layer
-
-### External Dependencies
-
-**AI/ML Services:**
-- OpenAI API (via Replit AI Integrations service)
-- Used for voice/video transcript analysis and task intelligence
-- OpenAI Whisper API for video-to-audio transcription ($0.006/min)
-- Generates SMART objectives, impact/urgency classification, and assignee suggestions
-- No direct OpenAI API key required - proxied through Replit's service
-
-**Video Processing:**
-- ffmpeg (fluent-ffmpeg) for audio extraction from video files
-- Supports: MP4, WebM, QuickTime, AVI formats
-- Max file size: 100MB, Max duration: 10 minutes (600 seconds)
-- Automatic cleanup of temporary video/audio files after processing
-- Process flow: Video upload → Audio extraction → Whisper transcription → AI analysis → Task creation
-
-**Payment Processing:**
-- Stripe for subscription management
-- Executive Plan: $1/month with unlimited team members
-- Customer ID and subscription status tracked in user records
-- Webhook handling for subscription events (indicated by raw body parsing)
-
-**Google Calendar Integration:**
-- Google Calendar API via Replit connector for OAuth management
-- Two-way sync: View calendar events and create events from tasks
-- Task deadline auto-sync with 1-hour pre-deadline calendar blocks
-- Team availability checking via free/busy API
-- Event tracking in database with task linkage
-
-**Email Integration:** **NEW (Phase 2, Month 2)**
-- AI-powered email parsing to extract task information
-- Automatic task creation from emails with delegation intelligence
-- Email inbox tracking with status management (pending/processed/ignored/failed)
-- Generic webhook endpoint compatible with any email service
-- Manual email-to-task API for testing and custom integrations
-- Deduplication via message ID tracking
-- SMART objectives extraction from email content
-- Note: AgentMail integration was declined - using manual/webhook approach instead
-
-**Third-party UI Libraries:**
-- Radix UI component primitives (20+ components)
-- Lucide React for icons
-- date-fns for date formatting
-- cmdk for command palette functionality
-- Embla Carousel for carousel components
-- Recharts for data visualization (charts/analytics)
-
-**Development Tools:**
-- Replit-specific plugins for development experience (cartographer, dev banner, runtime error overlay)
-- ESBuild for production bundling
-- Drizzle Kit for database migrations
-
-### Compliance & Governance Features (Phase 1 - November 2024)
-
-**Quick Wins Implemented:**
-1. **Formal Task Acceptance** - POST /api/tasks/:id/accept endpoint records acceptance timestamps for legal compliance
-2. **Expiry Date Tracking** - Tasks can have expiry dates with planned 7-day and 30-day warning notifications
-3. **Spending Limits** - Optional financial authority caps on tasks for budget control
-4. **Delegation History/Audit Log Page** - Complete audit trail showing all delegations, acceptance status, expiry dates, and spending limits
-5. **Marketing Comparison** - Landing page highlights advantages over traditional delegation tools (iDelegate, etc.)
-
-**Current System Limitations (Phase 1):**
-- Team members are records without separate authentication; only executives (task owners) have login access and can accept tasks
-- The executive formally accepts the delegation on behalf of the organization
-- Phase 2 could add: team member authentication, multi-level approvals, SSO integration, advanced reporting
-
-**Competitive Analysis Results:**
-- **vs. iDelegate**: 1000x more affordable ($1/mo/user vs $10k-15k setup), instant deployment (minutes vs 7-180 days), AI-powered vs manual entry
-- **vs. Traditional Tools**: Combines modern AI productivity with enterprise compliance without the enterprise price tag
-- **Unique Position**: Only delegation tool offering voice-first AI with formal audit trails at consumer pricing
-- **Pricing Model**: $1/month/user with 14-day free trial (no credit card needed until trial ends)
+The current implementation uses a demo user middleware, bcrypt for password hashing, and session-based authentication with cookies. Authorization validates resource ownership at the storage layer via a user context attached to all API requests.
 
 ### Key Architectural Decisions
 
-**Monorepo Structure:**
-- `/client` - React frontend application
-- `/server` - Express backend application  
-- `/shared` - Shared TypeScript types and schemas (Zod validation)
-- Enables code sharing and type safety across frontend/backend boundary
+-   **Monorepo Structure:** Organizes the codebase into `/client`, `/server`, and `/shared` for code sharing and type safety.
+-   **Task Creation Methods:** Supports voice input, text-based input, and video message delegation. Video delegation involves WebRTC recording, backend audio extraction (ffmpeg), OpenAI Whisper for transcription, and AI analysis for structured task data.
+-   **Real-time Features:** Utilizes React Query polling for notifications and dashboard statistics rather than WebSockets.
+-   **Offline Functionality:** Implemented via IndexedDB for offline storage of API data, mutation queuing for offline operations, and a service worker for app caching, ensuring seamless online/offline transitions. Video delegation requires online connectivity.
+-   **Voice-First & Mobile-First Strategy:** Prioritizes features like a bottom navigation bar, PWA, push notifications, and enhanced voice commands to optimize for mobile and voice interaction.
+-   **Styling Philosophy:** Utility-first with Tailwind, custom elevation systems, and design tokens stored in CSS variables.
+-   **Error Handling:** Utilizes toast notifications for user-facing errors and centralized API error handling, with Zod schema validation.
+-   **Performance Considerations:** Employs infinite stale time, manual invalidation with React Query, no automatic refetch on window focus, code splitting, and optimistic updates.
 
-**Task Creation Methods:**
-Three delegation methods available via tabbed interface on dashboard:
+## External Dependencies
 
-1. **Voice Input Processing:**
-   - Client captures voice input
-   - Transcript sent to `/api/tasks/analyze` endpoint
-   - Server uses OpenAI to extract structured task data
-   - Immediate task creation with AI-generated metadata
-   - Optimistic UI updates via React Query invalidation
-
-2. **Text-Based Task Creation:**
-   - Executives type task details directly
-   - "Analyze with AI" button triggers AI analysis
-   - Same AI analysis pipeline as voice input
-   - Ideal for desk-based work scenarios
-
-3. **Video Message Delegation:** **NEW**
-   - Record video via WebRTC (MediaRecorder API) or upload video file
-   - VideoOverlay component with states: idle, recording, preview, uploading, processing
-   - Real-time recording timer with auto-stop at 10 minutes
-   - Backend extracts audio using ffmpeg
-   - OpenAI Whisper transcribes audio to text
-   - Transcript analyzed by AI (same pipeline as voice)
-   - Task created automatically with full metadata
-   - Processing stats returned: transcription time, analysis time, total time
-   - Perfect for detailed instructions or walkthroughs
-
-**Real-time Features:**
-- Notification system for task assignments, completions, and updates
-- Mark as read functionality for notification management
-- Dashboard statistics computed server-side on demand
-- No WebSocket implementation - relies on polling via React Query refetch
-
-**Offline Functionality:**
-- IndexedDB-based offline storage for all API data (tasks, team members, analytics, voice history, notifications)
-- Automatic caching of API responses when online
-- Fallback to cached data when offline
-- Mutation queue system for create/update/delete operations while offline
-- Background sync to process queued mutations when connection restored
-- Service worker pre-caches all app routes for offline access
-- Voice recording queue for offline voice delegations
-- Real-time offline status indicator showing connection state and pending sync operations
-- Seamless online/offline transitions with automatic data synchronization
-- Note: Video delegation requires online connectivity for Whisper transcription
-
-**Voice-First & Mobile-First Strategy (Nov 2025):**
-Priority enhancements identified from competitive analysis:
-- **Tier 1 Critical:** Bottom navigation bar, PWA install prompts, push notifications, swipe gestures, enhanced voice commands
-- **Tier 2 High Impact:** AI predictive assignment, conversational AI assistant, smart reminders
-- **Tier 3 Polish:** Micro-interactions, dark mode optimization, accessibility upgrades
-- **Tier 4 Ecosystem:** Slack bot (Phase 2 Month 3), Siri/Google Assistant integration
-- **Success Metrics:** >60% voice task creation, >70% mobile traffic, >30% PWA install rate, >90% voice command accuracy
-See COMPETITIVE_ANALYSIS_2025.md for detailed roadmap and feature specifications.
-
-**Styling Philosophy:**
-- Utility-first with Tailwind
-- Custom elevation system (`hover-elevate`, `active-elevate-2`) for consistent interaction states
-- Design tokens stored in CSS variables for theme flexibility
-- Component-scoped styling via className composition
-
-**Error Handling:**
-- Toast notifications for user-facing errors
-- Centralized API error handling in queryClient
-- Zod schema validation on API boundaries with friendly error messages via `zod-validation-error`
-
-**Performance Considerations:**
-- Infinite stale time on React Query by default (manual invalidation)
-- No automatic refetch on window focus
-- Code splitting via dynamic imports for Replit plugins
-- Optimistic updates for improved perceived performance
+-   **AI/ML Services:** OpenAI API (via Replit AI Integrations service) for voice/video transcript analysis, SMART objective generation, impact/urgency classification, and assignee suggestions. OpenAI Whisper API specifically for video-to-audio transcription.
+-   **Video Processing:** ffmpeg (fluent-ffmpeg) for audio extraction from video files (MP4, WebM, QuickTime, AVI), with a maximum file size of 100MB and duration of 10 minutes.
+-   **Payment Processing:** Stripe for subscription management and webhook handling.
+-   **Google Calendar Integration:** Google Calendar API (via Replit connector) for two-way sync, deadline tracking, and team availability checking.
+-   **Slack Integration:** OAuth 2.0 flow for task notifications to Slack, triggered by task creation, assignment, and completion events. Token storage and workspace metadata are managed in the database.
+-   **Integration Marketplace:** A UI at `/integrations` provides a professional interface for managing connections to various external services, supporting future integrations with services like Trello, Asana, Monday, GitHub, GitLab, Jira, Teams, Discord, Telegram, Zapier/Make.
+-   **Third-party UI Libraries:** Radix UI, Lucide React, date-fns, cmdk, Embla Carousel, Recharts.
+-   **Development Tools:** Replit-specific plugins, ESBuild, Drizzle Kit.
