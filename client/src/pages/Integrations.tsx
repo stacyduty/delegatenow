@@ -7,7 +7,29 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Link2, Link2Off, ExternalLink, CheckCircle2, Zap, MessageSquare, Video, FolderOpen } from "lucide-react";
-import { SiSlack, SiGmail, SiGooglemeet, SiGoogledrive } from "react-icons/si";
+import { 
+  SiSlack, 
+  SiGmail, 
+  SiGooglemeet, 
+  SiGoogledrive,
+  SiMicrosoftoutlook,
+  SiZendesk,
+  SiDropbox,
+  SiTwilio,
+  SiAsana,
+  SiHubspot,
+  SiJira,
+  SiLinear,
+  SiConfluence,
+  SiGithub,
+  SiNotion,
+  SiDiscord,
+  SiMicrosoftonedrive,
+  SiMicrosoftsharepoint,
+  SiTrello,
+  SiGooglesheets,
+  SiGoogledocs
+} from "react-icons/si";
 
 interface Integration {
   id: string;
@@ -309,6 +331,261 @@ export default function Integrations() {
       ],
       tier: "free",
     },
+    {
+      id: "outlook",
+      name: "Outlook",
+      description: "Sync tasks with Outlook email and calendar. Turn emails into tasks, send task reminders via Outlook, and integrate with your Microsoft 365 workflow.",
+      icon: SiMicrosoftoutlook,
+      color: "bg-[#0078D4]",
+      connected: false,
+      capabilities: [
+        "Create tasks from Outlook emails",
+        "Send task notifications via email",
+        "Calendar integration for deadlines",
+        "Microsoft 365 ecosystem sync",
+      ],
+      tier: "free",
+    },
+    {
+      id: "zendesk",
+      name: "Zendesk",
+      description: "Convert customer support tickets into delegated tasks. Automatically create tasks from high-priority tickets and keep your team aligned with customer needs.",
+      icon: SiZendesk,
+      color: "bg-[#03363D]",
+      connected: false,
+      capabilities: [
+        "Auto-create tasks from tickets",
+        "Priority-based task creation",
+        "Customer context in tasks",
+        "Support team delegation",
+      ],
+      tier: "free",
+    },
+    {
+      id: "dropbox",
+      name: "Dropbox",
+      description: "Store and share task-related files with Dropbox. Upload documents, attach files to tasks, and collaborate with your team using Dropbox's reliable file storage.",
+      icon: SiDropbox,
+      color: "bg-[#0061FF]",
+      connected: false,
+      capabilities: [
+        "Attach Dropbox files to tasks",
+        "Upload task documents",
+        "Share files with team members",
+        "Access files from anywhere",
+      ],
+      tier: "free",
+    },
+    {
+      id: "twilio",
+      name: "Twilio",
+      description: "Send SMS task reminders and notifications via Twilio. Keep your team updated on urgent tasks with instant text messages and phone notifications.",
+      icon: SiTwilio,
+      color: "bg-[#F22F46]",
+      connected: false,
+      capabilities: [
+        "SMS task notifications",
+        "Urgent task alerts via text",
+        "Phone call reminders",
+        "Multi-channel task updates",
+      ],
+      tier: "free",
+    },
+    {
+      id: "asana",
+      name: "Asana",
+      description: "Two-way sync with Asana projects. Import Asana tasks as templates, export delegated tasks to Asana, and keep both platforms in sync for unified project management.",
+      icon: SiAsana,
+      color: "bg-[#F06A6A]",
+      connected: false,
+      capabilities: [
+        "Import Asana tasks as templates",
+        "Export tasks to Asana projects",
+        "Two-way task synchronization",
+        "Unified project management",
+      ],
+      tier: "free",
+    },
+    {
+      id: "hubspot",
+      name: "HubSpot",
+      description: "Connect your CRM workflow with task delegation. Create tasks from HubSpot deals, contacts, and activities to align sales and operations teams.",
+      icon: SiHubspot,
+      color: "bg-[#FF7A59]",
+      connected: false,
+      capabilities: [
+        "Create tasks from CRM activities",
+        "Deal-based task automation",
+        "Contact-linked task delegation",
+        "Sales-ops alignment",
+      ],
+      tier: "free",
+    },
+    {
+      id: "jira",
+      name: "Jira",
+      description: "Bridge executive delegation with engineering execution. Convert high-level strategic tasks into Jira issues and track technical implementation progress.",
+      icon: SiJira,
+      color: "bg-[#0052CC]",
+      connected: false,
+      capabilities: [
+        "Convert tasks to Jira issues",
+        "Track engineering progress",
+        "Strategic-to-tactical alignment",
+        "Development team integration",
+      ],
+      tier: "free",
+    },
+    {
+      id: "linear",
+      name: "Linear",
+      description: "Seamlessly delegate to product and engineering teams using Linear. Create Linear issues from executive tasks and maintain velocity across strategic initiatives.",
+      icon: SiLinear,
+      color: "bg-[#5E6AD2]",
+      connected: false,
+      capabilities: [
+        "Create Linear issues from tasks",
+        "Product team delegation",
+        "Issue tracking and velocity",
+        "Engineering workflow integration",
+      ],
+      tier: "free",
+    },
+    {
+      id: "confluence",
+      name: "Confluence",
+      description: "Link tasks to Confluence documentation. Attach knowledge base articles, meeting notes, and project docs to provide context for delegated work.",
+      icon: SiConfluence,
+      color: "bg-[#172B4D]",
+      connected: false,
+      capabilities: [
+        "Link tasks to documentation",
+        "Attach knowledge base articles",
+        "Context-rich task delegation",
+        "Team documentation access",
+      ],
+      tier: "free",
+    },
+    {
+      id: "github",
+      name: "GitHub",
+      description: "Connect code repositories with task delegation. Create GitHub issues from tasks, track commits, and align executive priorities with development work.",
+      icon: SiGithub,
+      color: "bg-[#181717]",
+      connected: false,
+      capabilities: [
+        "Create GitHub issues from tasks",
+        "Track repository activity",
+        "Code-task alignment",
+        "Developer team delegation",
+      ],
+      tier: "free",
+    },
+    {
+      id: "notion",
+      name: "Notion",
+      description: "Sync tasks with Notion databases and workspaces. Export task data, link to Notion pages, and maintain a unified knowledge base across your organization.",
+      icon: SiNotion,
+      color: "bg-[#000000]",
+      connected: false,
+      capabilities: [
+        "Sync tasks to Notion databases",
+        "Link to Notion workspace pages",
+        "Unified knowledge management",
+        "Team workspace integration",
+      ],
+      tier: "free",
+    },
+    {
+      id: "discord",
+      name: "Discord",
+      description: "Send task notifications to Discord servers. Keep your team informed in their preferred communication channel with real-time task updates and reminders.",
+      icon: SiDiscord,
+      color: "bg-[#5865F2]",
+      connected: false,
+      capabilities: [
+        "Task notifications to channels",
+        "Bot-based task reminders",
+        "Team server integration",
+        "Real-time update alerts",
+      ],
+      tier: "free",
+    },
+    {
+      id: "onedrive",
+      name: "OneDrive",
+      description: "Store task files in Microsoft OneDrive. Seamlessly integrate with Microsoft 365, share documents, and access files across all your devices.",
+      icon: SiMicrosoftonedrive,
+      color: "bg-[#0078D4]",
+      connected: false,
+      capabilities: [
+        "Store files in OneDrive",
+        "Microsoft 365 integration",
+        "Cross-device file access",
+        "Document sharing",
+      ],
+      tier: "free",
+    },
+    {
+      id: "sharepoint",
+      name: "SharePoint",
+      description: "Manage team documents and collaboration spaces. Connect tasks to SharePoint sites, libraries, and lists for enterprise-grade document management.",
+      icon: SiMicrosoftsharepoint,
+      color: "bg-[#0078D4]",
+      connected: false,
+      capabilities: [
+        "Link tasks to SharePoint sites",
+        "Document library integration",
+        "Enterprise collaboration",
+        "Team site management",
+      ],
+      tier: "free",
+    },
+    {
+      id: "trello",
+      name: "Trello",
+      description: "Import Trello boards and convert cards into delegated tasks. Bring visual task management into your delegation workflow with one-click imports.",
+      icon: SiTrello,
+      color: "bg-[#0079BF]",
+      connected: false,
+      capabilities: [
+        "Import Trello boards",
+        "Convert cards to tasks",
+        "Visual task management",
+        "Board-based delegation",
+      ],
+      tier: "free",
+    },
+    {
+      id: "google-sheets",
+      name: "Google Sheets",
+      description: "Export task data to spreadsheets and create custom reports. Analyze delegation patterns, track team performance, and generate insights from task data.",
+      icon: SiGooglesheets,
+      color: "bg-[#34A853]",
+      connected: false,
+      capabilities: [
+        "Export tasks to spreadsheets",
+        "Custom reporting and analytics",
+        "Data visualization",
+        "Performance tracking",
+      ],
+      tier: "free",
+    },
+    {
+      id: "google-docs",
+      name: "Google Docs",
+      description: "Link Google Docs to tasks for detailed briefings. Attach project plans, meeting notes, and specifications to provide comprehensive context for delegated work.",
+      icon: SiGoogledocs,
+      color: "bg-[#4285F4]",
+      connected: false,
+      capabilities: [
+        "Link Docs to tasks",
+        "Detailed task briefings",
+        "Collaborative documentation",
+        "Context-rich delegation",
+      ],
+      tier: "free",
+    },
   ];
 
   const connectedIntegrations = integrations.filter((i) => i.connected);
@@ -399,7 +676,7 @@ export default function Integrations() {
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">Capabilities:</p>
                     <ul className="space-y-1">
-                      {integration.capabilities.slice(0, 3).map((capability, idx) => (
+                      {integration.capabilities.map((capability, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-xs">
                           <Zap className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
                           <span className="text-muted-foreground">{capability}</span>
@@ -538,7 +815,7 @@ export default function Integrations() {
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">Capabilities:</p>
                     <ul className="space-y-1">
-                      {integration.capabilities.slice(0, 3).map((capability, idx) => (
+                      {integration.capabilities.map((capability, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-xs">
                           <Zap className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
                           <span className="text-muted-foreground">{capability}</span>
@@ -563,6 +840,11 @@ export default function Integrations() {
                           title: "Connect Google Drive",
                           description: "Please connect Google Drive from the Tools pane (left sidebar) to enable file management features.",
                         });
+                      } else {
+                        toast({
+                          title: `Connect ${integration.name}`,
+                          description: `Please connect ${integration.name} from the Tools pane (left sidebar) to enable this integration.`,
+                        });
                       }
                     }}
                     disabled={(connectingSlack && integration.id === "slack") || (connectingGmail && integration.id === "gmail")}
@@ -586,24 +868,18 @@ export default function Integrations() {
             Coming Soon: More Integrations
           </CardTitle>
           <CardDescription>
-            We're building the integration ecosystem. More tools coming in the next 6 months:
+            More productivity tools coming soon to expand your delegation ecosystem:
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              "Google Drive",
-              "Asana",
-              "Trello",
               "Microsoft Teams",
-              "Discord",
               "Telegram Bot",
               "Zoom",
-              "GitHub",
-              "Jira",
-              "Linear",
-              "Notion",
               "Todoist",
+              "Monday.com",
+              "ClickUp",
             ].map((tool, idx) => (
               <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="text-primary">•</span>
