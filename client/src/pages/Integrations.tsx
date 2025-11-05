@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Link2, Link2Off, ExternalLink, CheckCircle2, Zap, MessageSquare } from "lucide-react";
-import { SiSlack } from "react-icons/si";
+import { SiSlack, SiGmail } from "react-icons/si";
 
 interface Integration {
   id: string;
@@ -29,12 +29,24 @@ interface SlackStatus {
   lastSync?: string;
 }
 
+interface GmailStatus {
+  connected: boolean;
+  status?: string;
+  emailAddress?: string;
+  lastSync?: string;
+}
+
 export default function Integrations() {
   const { toast } = useToast();
   const [connectingSlack, setConnectingSlack] = useState(false);
+  const [connectingGmail, setConnectingGmail] = useState(false);
 
   const { data: slackStatus, isFetching: slackFetching, error: slackError, status } = useQuery<SlackStatus>({
     queryKey: ["/api/integrations/slack"],
+  });
+
+  const { data: gmailStatus, isFetching: gmailFetching } = useQuery<GmailStatus>({
+    queryKey: ["/api/integrations/gmail"],
   });
 
   const testSlackMutation = useMutation({
@@ -94,6 +106,84 @@ export default function Integrations() {
     }
   };
 
+  // Gmail mutations
+  const testGmailMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/integrations/gmail/test", "POST", {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Test email sent",
+        description: "Check your inbox!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to send test email",
+        description: error.message,
+      });
+    },
+  });
+
+  const syncGmailMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/integrations/gmail/sync", "POST", {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/gmail"] });
+      toast({
+        title: "Gmail synced",
+        description: `Synced ${data.synced} emails, created ${data.tasksCreated} tasks`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to sync Gmail",
+        description: error.message,
+      });
+    },
+  });
+
+  const disconnectGmailMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/integrations/gmail", "DELETE", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/gmail"] });
+      toast({
+        title: "Gmail disconnected",
+        description: "Your Gmail integration has been removed.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to disconnect",
+        description: error.message,
+      });
+    },
+  });
+
+  const handleConnectGmail = async () => {
+    setConnectingGmail(true);
+    try {
+      const response = await fetch("/api/integrations/gmail/install");
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Connection failed",
+        description: "Failed to initiate Gmail connection",
+      });
+      setConnectingGmail(false);
+    }
+  };
+
   const integrations: Integration[] = [
     {
       id: "slack",
@@ -109,6 +199,23 @@ export default function Integrations() {
         "Real-time updates in channels",
         "Team collaboration alerts",
         "Rich task formatting with impact/urgency",
+      ],
+      tier: "free",
+    },
+    {
+      id: "gmail",
+      name: "Gmail",
+      description: "Create tasks from labeled emails and send task updates via email. Auto-process emails with the 'Deleg8te' label using AI to extract actionable tasks.",
+      icon: SiGmail,
+      color: "bg-[#EA4335]",
+      connected: gmailStatus?.connected || false,
+      teamName: gmailStatus?.emailAddress,
+      lastSync: gmailStatus?.lastSync ? new Date(gmailStatus.lastSync) : undefined,
+      capabilities: [
+        "Auto-create tasks from labeled emails",
+        "Send task updates via email",
+        "AI-powered email parsing",
+        "Smart task extraction from email content",
       ],
       tier: "free",
     },
@@ -225,15 +332,43 @@ export default function Integrations() {
                         {testSlackMutation.isPending ? "Sending..." : "Test"}
                       </Button>
                     )}
+                    {integration.id === "gmail" && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => testGmailMutation.mutate()}
+                          disabled={testGmailMutation.isPending}
+                          className="flex-1"
+                          data-testid="button-test-gmail"
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          {testGmailMutation.isPending ? "Sending..." : "Test"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => syncGmailMutation.mutate()}
+                          disabled={syncGmailMutation.isPending}
+                          className="flex-1"
+                          data-testid="button-sync-gmail"
+                        >
+                          <Zap className="h-4 w-4 mr-2" />
+                          {syncGmailMutation.isPending ? "Syncing..." : "Sync"}
+                        </Button>
+                      </>
+                    )}
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={() => {
                         if (integration.id === "slack") {
                           disconnectSlackMutation.mutate();
+                        } else if (integration.id === "gmail") {
+                          disconnectGmailMutation.mutate();
                         }
                       }}
-                      disabled={disconnectSlackMutation.isPending}
+                      disabled={disconnectSlackMutation.isPending || disconnectGmailMutation.isPending}
                       className="flex-1"
                       data-testid={`button-disconnect-${integration.id}`}
                     >
@@ -298,14 +433,16 @@ export default function Integrations() {
                     onClick={() => {
                       if (integration.id === "slack") {
                         handleConnectSlack();
+                      } else if (integration.id === "gmail") {
+                        handleConnectGmail();
                       }
                     }}
-                    disabled={connectingSlack && integration.id === "slack"}
+                    disabled={(connectingSlack && integration.id === "slack") || (connectingGmail && integration.id === "gmail")}
                     className="w-full"
                     data-testid={`button-connect-${integration.id}`}
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    {connectingSlack && integration.id === "slack" ? "Connecting..." : "Connect"}
+                    {((connectingSlack && integration.id === "slack") || (connectingGmail && integration.id === "gmail")) ? "Connecting..." : "Connect"}
                   </Button>
                 </CardContent>
               </Card>

@@ -2156,6 +2156,338 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ INTEGRATION ROUTES: GMAIL ============
+
+  // Helper function to refresh Gmail access token if needed
+  async function ensureGmailToken(integration: any) {
+    const credentials = JSON.parse(integration.credentials || '{}');
+    
+    // Check if token is expired or close to expiry (within 5 minutes)
+    const now = Date.now();
+    const expiryDate = credentials.expiryDate || 0;
+    const needsRefresh = now >= (expiryDate - 5 * 60 * 1000);
+
+    if (needsRefresh && credentials.refreshToken) {
+      const { refreshAccessToken } = await import('./integrations/gmail');
+      const refreshed = await refreshAccessToken(credentials.refreshToken);
+      
+      // Update credentials with new access token
+      const newCredentials = {
+        ...credentials,
+        accessToken: refreshed.access_token,
+        expiryDate: now + (refreshed.expires_in * 1000),
+      };
+
+      // Persist updated credentials
+      await storage.updateIntegration(integration.id, {
+        credentials: JSON.stringify(newCredentials),
+      });
+
+      return newCredentials;
+    }
+
+    return credentials;
+  }
+
+  // Get Gmail OAuth authorization URL
+  app.get('/api/integrations/gmail/install', isAuthenticated, async (req: any, res) => {
+    try {
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        return res.status(500).json({ error: "Gmail integration not configured. Please set GOOGLE_CLIENT_ID" });
+      }
+
+      const userId = req.user.claims.sub;
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/integrations/gmail/callback`;
+      const scopes = [
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.labels',
+        'https://www.googleapis.com/auth/gmail.modify',
+      ].join(' ');
+      
+      // Generate CSRF state token
+      const state = crypto.randomBytes(32).toString('hex');
+      oauthStates.set(userId, {
+        state,
+        expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+      });
+      
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&state=${state}&access_type=offline&prompt=consent`;
+      
+      res.json({ url: authUrl });
+    } catch (error: any) {
+      console.error("Error generating Gmail OAuth URL:", error);
+      res.status(500).json({ error: "Failed to generate Gmail authorization URL" });
+    }
+  });
+
+  // Handle Gmail OAuth callback
+  app.get('/api/integrations/gmail/callback', isAuthenticated, async (req: any, res) => {
+    try {
+      const { code, state } = req.query;
+      if (!code || !state) {
+        return res.redirect('/?error=gmail_oauth_failed');
+      }
+
+      const userId = req.user.claims.sub;
+      
+      // Verify CSRF state token
+      const storedState = oauthStates.get(userId);
+      if (!storedState || storedState.state !== state || storedState.expiresAt < Date.now()) {
+        console.error("Invalid or expired OAuth state");
+        oauthStates.delete(userId);
+        return res.redirect('/?error=gmail_oauth_csrf_failed');
+      }
+      
+      // Clean up state after verification
+      oauthStates.delete(userId);
+
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/integrations/gmail/callback`;
+      const { exchangeCodeForToken, getUserProfile, getOrCreateLabel } = await import('./integrations/gmail');
+      const tokenResponse = await exchangeCodeForToken(code as string, redirectUri);
+
+      if (!tokenResponse.access_token) {
+        console.error("Gmail OAuth error: No access token");
+        return res.redirect('/?error=gmail_oauth_failed');
+      }
+
+      // Get user profile
+      const profile = await getUserProfile(tokenResponse.access_token);
+
+      // Create "Deleg8te" label for auto-processing
+      const delegateLabelId = await getOrCreateLabel(tokenResponse.access_token, 'Deleg8te');
+
+      // Normalize credentials (convert Google's field names to our format)
+      const now = Date.now();
+      const expiresIn = tokenResponse.expires_in || 3600; // Default to 1 hour
+      const credentials = JSON.stringify({
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token,
+        scope: tokenResponse.scope,
+        expiryDate: tokenResponse.expiry_date || (now + expiresIn * 1000), // Normalize to our field name
+        emailAddress: profile.emailAddress,
+        delegateLabelId,
+      });
+
+      // Check if integration already exists
+      const existing = await storage.getIntegration(userId, 'gmail');
+      if (existing) {
+        await storage.updateIntegration(existing.id, {
+          credentials,
+          status: 'active',
+          lastSyncAt: new Date(),
+        });
+      } else {
+        await storage.createIntegration({
+          userId,
+          integrationId: 'gmail',
+          credentials,
+          settings: {},
+          status: 'active',
+          lastSyncAt: new Date(),
+        });
+      }
+
+      res.redirect('/?integration=gmail&status=success');
+    } catch (error: any) {
+      console.error("Error in Gmail OAuth callback:", error);
+      res.redirect('/?error=gmail_oauth_failed');
+    }
+  });
+
+  // Get Gmail integration status
+  app.get('/api/integrations/gmail', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integration = await storage.getIntegration(userId, 'gmail');
+      
+      if (!integration) {
+        return res.json({ connected: false });
+      }
+
+      const credentials = JSON.parse(integration.credentials || '{}');
+      res.json({
+        connected: true,
+        status: integration.status,
+        emailAddress: credentials.emailAddress,
+        lastSync: integration.lastSyncAt,
+      });
+    } catch (error) {
+      console.error("Error fetching Gmail integration:", error);
+      res.status(500).json({ error: "Failed to fetch Gmail integration status" });
+    }
+  });
+
+  // Send test email via Gmail
+  app.post('/api/integrations/gmail/test', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integration = await storage.getIntegration(userId, 'gmail');
+      
+      if (!integration) {
+        return res.status(404).json({ error: "Gmail not connected" });
+      }
+
+      // Ensure token is fresh
+      const credentials = await ensureGmailToken(integration);
+      const { sendEmail } = await import('./integrations/gmail');
+      
+      await sendEmail(
+        credentials.accessToken,
+        credentials.emailAddress,
+        'Test from Deleg8te.ai',
+        '<p>Test notification from Deleg8te.ai! Your Gmail integration is working correctly. 🎉</p><p>You can now create tasks from labeled emails and receive task updates via email.</p>'
+      );
+
+      res.json({ success: true, message: `Test email sent to ${credentials.emailAddress}` });
+    } catch (error: any) {
+      console.error("Error sending Gmail test email:", error);
+      res.status(500).json({ error: error.message || "Failed to send test email" });
+    }
+  });
+
+  // Sync Gmail inbox for labeled messages (manual trigger)
+  app.post('/api/integrations/gmail/sync', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integration = await storage.getIntegration(userId, 'gmail');
+      
+      if (!integration) {
+        return res.status(404).json({ error: "Gmail not connected" });
+      }
+
+      // Ensure token is fresh
+      const credentials = await ensureGmailToken(integration);
+      const { listMessages, extractHeaders, extractBody } = await import('./integrations/gmail');
+      
+      // Get messages with "Deleg8te" label
+      const messages = await listMessages(credentials.accessToken, [credentials.delegateLabelId], 10);
+
+      let processedCount = 0;
+      for (const message of messages) {
+        const headers = extractHeaders(message);
+        const { bodyText, bodyHtml } = extractBody(message);
+
+        // Check if already processed
+        const existingEmail = await storage.getEmailByMessageId(message.id);
+        if (existingEmail) {
+          continue; // Skip already processed emails
+        }
+
+        // Process email via webhook (reuse existing email processing logic)
+        try {
+          const bodyToAnalyze = bodyText || htmlToPlainText(bodyHtml);
+          
+          // Store email
+          const email = await storage.createEmail({
+            userId,
+            taskId: null,
+            messageId: message.id,
+            from: headers.from,
+            fromName: headers.fromName,
+            subject: headers.subject,
+            bodyText: bodyToAnalyze,
+            bodyHtml,
+            receivedAt: new Date(headers.date),
+            status: 'pending',
+            processedAt: null,
+            errorMessage: null,
+            extractedTask: null,
+          });
+
+          // Get team members
+          const teamMembers = await storage.getTeamMembers(userId);
+          const teamMemberNames = teamMembers.map(tm => tm.name);
+
+          // Analyze with AI
+          const analysis = await analyzeEmailForTask(headers.from, headers.subject, bodyToAnalyze, teamMemberNames);
+
+          if (analysis.shouldCreateTask && analysis.taskData) {
+            // Find suggested team member
+            let suggestedTeamMember = null;
+            if (analysis.taskData.suggestedAssignee) {
+              suggestedTeamMember = teamMembers.find(
+                tm => tm.name.toLowerCase() === analysis.taskData!.suggestedAssignee?.toLowerCase()
+              );
+            }
+
+            // Create task
+            const task = await storage.createTask({
+              userId,
+              teamMemberId: suggestedTeamMember?.id || null,
+              title: analysis.taskData.title,
+              description: analysis.taskData.description,
+              voiceTranscript: `Email from: ${headers.from}\nSubject: ${headers.subject}`,
+              impact: analysis.taskData.impact,
+              urgency: analysis.taskData.urgency,
+              aiAnalysis: analysis.taskData.smartObjectives || null,
+              suggestedAssignee: analysis.taskData.suggestedAssignee || null,
+              status: 'delegated',
+              progress: 0,
+              dueDate: analysis.taskData.dueDate ? new Date(analysis.taskData.dueDate) : null,
+              acceptedAt: null,
+              expiryDate: null,
+              spendingLimit: null,
+            });
+
+            // Update email with task linkage
+            await storage.updateEmail(email.id, {
+              taskId: task.id,
+              status: 'processed',
+              processedAt: new Date(),
+              extractedTask: analysis.taskData as any,
+            });
+
+            processedCount++;
+          } else {
+            // Mark as ignored
+            await storage.updateEmail(email.id, {
+              status: 'ignored',
+              processedAt: new Date(),
+              extractedTask: { reason: analysis.reason } as any,
+            });
+          }
+        } catch (processError) {
+          console.error("Error processing email:", processError);
+        }
+      }
+
+      // Update last sync
+      await storage.updateIntegration(integration.id, {
+        lastSyncAt: new Date(),
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Synced ${messages.length} emails, created ${processedCount} tasks`,
+        synced: messages.length,
+        tasksCreated: processedCount
+      });
+    } catch (error: any) {
+      console.error("Error syncing Gmail:", error);
+      res.status(500).json({ error: error.message || "Failed to sync Gmail inbox" });
+    }
+  });
+
+  // Disconnect Gmail integration
+  app.delete('/api/integrations/gmail', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integration = await storage.getIntegration(userId, 'gmail');
+      
+      if (!integration) {
+        return res.status(404).json({ error: "Gmail integration not found" });
+      }
+
+      await storage.deleteIntegration(integration.id);
+      res.json({ success: true, message: "Gmail integration disconnected" });
+    } catch (error) {
+      console.error("Error disconnecting Gmail:", error);
+      res.status(500).json({ error: "Failed to disconnect Gmail integration" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
