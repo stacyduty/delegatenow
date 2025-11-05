@@ -56,6 +56,12 @@ export default function VideoOverlay({ isOpen, onClose }: VideoOverlayProps) {
     onSuccess: (data) => {
       setAnalysis(data.analysis);
       setProcessingStats(data.processingStats);
+      // Clear video data to prevent re-submission
+      if (videoURL) {
+        URL.revokeObjectURL(videoURL);
+      }
+      setRecordedBlob(null);
+      setVideoURL("");
       setState("idle");
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
@@ -238,7 +244,8 @@ export default function VideoOverlay({ isOpen, onClose }: VideoOverlayProps) {
           <div className="text-center space-y-2">
             <h2 className="text-3xl font-bold">Video Delegation</h2>
             <p className="text-muted-foreground">
-              {state === "idle" && "Record or upload a video message"}
+              {state === "idle" && !analysis && "Record or upload a video message"}
+              {state === "idle" && analysis && "Task created successfully"}
               {state === "recording" && `Recording... ${formatTime(recordingTime)}`}
               {state === "preview" && "Review your video before processing"}
               {state === "uploading" && "Uploading video..."}
@@ -247,28 +254,30 @@ export default function VideoOverlay({ isOpen, onClose }: VideoOverlayProps) {
           </div>
 
           {/* Video Display */}
-          <div className="w-full max-w-2xl">
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-              <video
-                ref={videoRef}
-                src={videoURL}
-                controls={state === "preview"}
-                muted={state === "recording"}
-                className="w-full h-full object-cover"
-                data-testid="video-preview"
-              />
-              {state === "recording" && (
-                <div className="absolute top-4 right-4 bg-destructive text-destructive-foreground px-3 py-1 rounded-full flex items-center gap-2 animate-pulse">
-                  <div className="w-3 h-3 rounded-full bg-white"></div>
-                  <span className="font-mono">{formatTime(recordingTime)}</span>
-                </div>
-              )}
+          {!analysis && (
+            <div className="w-full max-w-2xl">
+              <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                <video
+                  ref={videoRef}
+                  src={videoURL}
+                  controls={state === "preview"}
+                  muted={state === "recording"}
+                  className="w-full h-full object-cover"
+                  data-testid="video-preview"
+                />
+                {state === "recording" && (
+                  <div className="absolute top-4 right-4 bg-destructive text-destructive-foreground px-3 py-1 rounded-full flex items-center gap-2 animate-pulse">
+                    <div className="w-3 h-3 rounded-full bg-white"></div>
+                    <span className="font-mono">{formatTime(recordingTime)}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Controls */}
           <div className="flex gap-4 flex-wrap justify-center">
-            {state === "idle" && (
+            {state === "idle" && !analysis && (
               <>
                 <Button
                   onClick={startRecording}
