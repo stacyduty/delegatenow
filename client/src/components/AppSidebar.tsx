@@ -1,4 +1,4 @@
-import { Home, ListTodo, Users, BarChart3, Mic, Settings, Crown, ScrollText, Calendar, Mail } from "lucide-react";
+import { Home, ListTodo, Users, BarChart3, Mic, Settings, Crown, ScrollText, Calendar, Mail, Puzzle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -53,6 +53,11 @@ const menuItems = [
     title: "Voice History",
     url: "/voice-history",
     icon: Mic,
+  },
+  {
+    title: "Integrations",
+    url: "/integrations",
+    icon: Puzzle,
   },
 ];
 
