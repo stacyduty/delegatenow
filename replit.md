@@ -2,9 +2,9 @@
 
 ## Overview
 
-Deleg8te.ai is a voice-powered task delegation platform designed for executives to efficiently manage teams and tasks. The application enables users to speak their tasks, leveraging AI to analyze, prioritize, and delegate work automatically. Built with a modern tech stack, it features real-time task tracking, team management, analytics, and **Google Calendar integration** with an emphasis on executive productivity and minimal friction.
+Deleg8te.ai is a voice-powered task delegation platform designed for executives to efficiently manage teams and tasks. The application enables users to speak their tasks, record video instructions, or type text, leveraging AI to analyze, prioritize, and delegate work automatically. Built with a modern tech stack, it features real-time task tracking, team management, analytics, and **Google Calendar integration** with an emphasis on executive productivity and minimal friction.
 
-**Core Value Proposition:** Transform voice input into structured, delegated tasks with AI-powered analysis including impact assessment, urgency classification, and SMART objectives generation. Now includes enterprise-grade compliance features: formal task acceptance timestamps, expiry tracking, spending limits, and complete audit trails. **NEW: Google Calendar integration** for two-way sync, deadline tracking, and team availability.
+**Core Value Proposition:** Transform voice, video, or text input into structured, delegated tasks with AI-powered analysis including impact assessment, urgency classification, and SMART objectives generation. Now includes enterprise-grade compliance features: formal task acceptance timestamps, expiry tracking, spending limits, and complete audit trails. **NEW: Google Calendar integration** for two-way sync, deadline tracking, and team availability. **NEW: Video delegation** with AI transcription via OpenAI Whisper.
 
 **Competitive Advantage:** Combines the AI-powered speed and productivity of modern tools ($1/month/user, instant deployment, voice-first interface, 14-day free trial with no credit card needed) with the compliance and governance features of enterprise delegation platforms (acceptance records, expiry management, audit trails) - without the $10k-15k setup fees or 7-180 day deployment times.
 
@@ -102,9 +102,17 @@ Preferred communication style: Simple, everyday language.
 
 **AI/ML Services:**
 - OpenAI API (via Replit AI Integrations service)
-- Used for voice transcript analysis and task intelligence
+- Used for voice/video transcript analysis and task intelligence
+- OpenAI Whisper API for video-to-audio transcription ($0.006/min)
 - Generates SMART objectives, impact/urgency classification, and assignee suggestions
 - No direct OpenAI API key required - proxied through Replit's service
+
+**Video Processing:**
+- ffmpeg (fluent-ffmpeg) for audio extraction from video files
+- Supports: MP4, WebM, QuickTime, AVI formats
+- Max file size: 100MB, Max duration: 10 minutes (600 seconds)
+- Automatic cleanup of temporary video/audio files after processing
+- Process flow: Video upload → Audio extraction → Whisper transcription → AI analysis → Task creation
 
 **Payment Processing:**
 - Stripe for subscription management
@@ -170,12 +178,32 @@ Preferred communication style: Simple, everyday language.
 - `/shared` - Shared TypeScript types and schemas (Zod validation)
 - Enables code sharing and type safety across frontend/backend boundary
 
-**Voice Input Processing:**
-- Client captures voice input (implementation details not visible in files)
-- Transcript sent to `/api/tasks/analyze` endpoint
-- Server uses OpenAI to extract structured task data
-- Immediate task creation with AI-generated metadata
-- Optimistic UI updates via React Query invalidation
+**Task Creation Methods:**
+Three delegation methods available via tabbed interface on dashboard:
+
+1. **Voice Input Processing:**
+   - Client captures voice input
+   - Transcript sent to `/api/tasks/analyze` endpoint
+   - Server uses OpenAI to extract structured task data
+   - Immediate task creation with AI-generated metadata
+   - Optimistic UI updates via React Query invalidation
+
+2. **Text-Based Task Creation:**
+   - Executives type task details directly
+   - "Analyze with AI" button triggers AI analysis
+   - Same AI analysis pipeline as voice input
+   - Ideal for desk-based work scenarios
+
+3. **Video Message Delegation:** **NEW**
+   - Record video via WebRTC (MediaRecorder API) or upload video file
+   - VideoOverlay component with states: idle, recording, preview, uploading, processing
+   - Real-time recording timer with auto-stop at 10 minutes
+   - Backend extracts audio using ffmpeg
+   - OpenAI Whisper transcribes audio to text
+   - Transcript analyzed by AI (same pipeline as voice)
+   - Task created automatically with full metadata
+   - Processing stats returned: transcription time, analysis time, total time
+   - Perfect for detailed instructions or walkthroughs
 
 **Real-time Features:**
 - Notification system for task assignments, completions, and updates
@@ -193,6 +221,7 @@ Preferred communication style: Simple, everyday language.
 - Voice recording queue for offline voice delegations
 - Real-time offline status indicator showing connection state and pending sync operations
 - Seamless online/offline transitions with automatic data synchronization
+- Note: Video delegation requires online connectivity for Whisper transcription
 
 **Voice-First & Mobile-First Strategy (Nov 2025):**
 Priority enhancements identified from competitive analysis:
